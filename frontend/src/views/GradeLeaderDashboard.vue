@@ -30,6 +30,11 @@
         </div>
       </div>
 
+      <div class="half-grid">
+        <WarningBoard :grade="myGrade" />
+        <AiAsk />
+      </div>
+
       <div class="glass-card chart-card">
         <div class="card-header">
           本年级数据分布
@@ -149,6 +154,8 @@ import CountUp from '../components/CountUp.vue'
 import FailCard from '../components/FailCard.vue'
 import DistributionChart from '../components/DistributionChart.vue'
 import GrowthIndexTip from '../components/GrowthIndexTip.vue'
+import WarningBoard from '../components/WarningBoard.vue'
+import AiAsk from '../components/AiAsk.vue'
 
 const router = useRouter()
 const myGrade = ref('')

@@ -262,3 +262,84 @@ export function requestErrorText(err, notFound = '未找到对应数据', fallba
   if (status === 400) return '请求参数不合法，请检查输入'
   return fallback
 }
+
+// ---------------- AI 能力 ----------------
+
+export function getLearningReport({ scope, studentId, className, grade } = {}) {
+  const params = { scope }
+  if (studentId) params.student_id = studentId
+  if (className) params.class_name = className
+  if (grade) params.grade = grade
+  return api.get('/ai/learning-report', { params })
+}
+
+export function getGrowthNarrative(studentId) {
+  return api.get('/ai/growth-narrative', { params: { student_id: studentId } })
+}
+
+export function getTalent(studentId) {
+  return api.get('/ai/talent', { params: { student_id: studentId } })
+}
+
+export function getEmotionRisk(studentId) {
+  return api.get('/ai/emotion-risk', { params: { student_id: studentId } })
+}
+
+export function getCompanionHistory(studentId, limit = 50) {
+  return api.get('/ai/companion/history', { params: { student_id: studentId, limit } })
+}
+
+export function sendCompanionMessage(studentId, message) {
+  return api.post('/ai/companion/chat', { student_id: studentId, message })
+}
+
+export function getWarningBoard({ className, grade, level } = {}) {
+  const params = {}
+  if (className) params.class_name = className
+  if (grade) params.grade = grade
+  if (level) params.level = level
+  return api.get('/ai/warning-board', { params })
+}
+
+export function getInterventions(studentId, status) {
+  const params = {}
+  if (studentId) params.student_id = studentId
+  if (status) params.status = status
+  return api.get('/ai/interventions', { params })
+}
+
+export function createIntervention(studentId) {
+  return api.post('/ai/interventions', { student_id: studentId })
+}
+
+export function followIntervention(id, note) {
+  return api.post(`/ai/interventions/${id}/follow`, { note })
+}
+
+export function closeIntervention(id) {
+  return api.post(`/ai/interventions/${id}/close`)
+}
+
+export function getLearningPath(studentId) {
+  return api.get('/ai/learning-path', { params: { student_id: studentId } })
+}
+
+export function generateLearningPath(studentId) {
+  return api.post('/ai/learning-path/generate', { student_id: studentId })
+}
+
+export function toggleLearningItem(planId, itemKey, done) {
+  return api.post(`/ai/learning-path/${planId}/toggle`, { item_key: itemKey, done })
+}
+
+export function getPaperAnalysis(planId, className) {
+  return api.get('/ai/paper-analysis', { params: { plan_id: planId, class_name: className } })
+}
+
+export function getGradeHints(planId, className) {
+  return api.get('/ai/grade-hints', { params: { plan_id: planId, class_name: className } })
+}
+
+export function askAI(query) {
+  return api.get('/ai/ask', { params: { q: query } })
+}

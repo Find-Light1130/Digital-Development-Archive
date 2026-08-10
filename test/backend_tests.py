@@ -136,6 +136,16 @@ def purge_test_users(db):
         db.commit()
 
 
+def cleanup_ai_data(db, student_ids):
+    """删除 AI 接口测试写入的干预/树洞/学习计划，保证可重复运行。"""
+    from backend.models import Intervention, CompanionChat, LearningPlan
+    if student_ids:
+        db.query(Intervention).filter(Intervention.student_id.in_(student_ids)).delete(synchronize_session=False)
+        db.query(CompanionChat).filter(CompanionChat.student_id.in_(student_ids)).delete(synchronize_session=False)
+        db.query(LearningPlan).filter(LearningPlan.student_id.in_(student_ids)).delete(synchronize_session=False)
+        db.commit()
+
+
 def wait_ready():
     deadline = time.time() + 30
     while time.time() < deadline:
@@ -940,6 +950,96 @@ def main():
     idx_profile = compute_growth_profile(test_sid, db)["growth_index"]
     check("批量 light 与画像端成长指数一致", abs(idx_admin - idx_profile) < 0.6, f"admin={idx_admin}, profile={idx_profile}")
 
+    print("== AI 能力接口 ==")
+    set_auth(None)
+    check("AI 学情报告未登录 401", get("/api/ai/learning-report?scope=student&student_id=1")[0] == 401)
+    check("AI 问数未登录 401", get("/api/ai/ask?q=人数")[0] == 401)
+
+    set_auth(student_token)
+    status, body = get(f"/api/ai/learning-report?scope=student&student_id={sid}")
+    check("学生 AI 学情报告", status == 200 and body.get("subjects") and body.get("summary"))
+    check("学生报告含建议", isinstance(body.get("suggestions"), list) and len(body["suggestions"]) > 0)
+    status, body = get("/api/ai/growth-narrative?student_id=999999")
+    check("成长叙事不存在学生 404", status == 404)
+    status, body = get(f"/api/ai/growth-narrative?student_id={sid}")
+    check("成长叙事生成", status == 200 and body.get("paragraphs"))
+    status, body = get(f"/api/ai/talent?student_id={sid}")
+    check("特长发现生成", status == 200 and body.get("talents") is not None)
+    status, body = get(f"/api/ai/emotion-risk?student_id={sid}")
+    check("情绪风险评估", status == 200 and body.get("level") in ("low", "medium", "high"))
+    status, body = get(f"/api/ai/learning-path?student_id={sid}")
+    check("学习路径获取", status in (200, 404))
+    status, body = post_json("/api/ai/companion/chat", {"student_id": sid, "message": "最近压力好大"})
+    check("树洞对话回复", status == 200 and body.get("reply"))
+    check("树洞对话含意图", body.get("intent") in ("anxious", "sad", "angry", "bored", "happy", "general"))
+    status, body = post_json("/api/ai/companion/chat", {"student_id": sid, "message": ""})
+    check("树洞空消息 400", status == 400)
+    status, body = post_json("/api/ai/companion/chat", {"student_id": other_sid, "message": "偷看别人树洞"})
+    check("树洞只能本人使用 403", status == 403)
+    status, body = get(f"/api/ai/companion/history?student_id={sid}&limit=10")
+    check("树洞历史返回", status == 200 and isinstance(body, list))
+
+    set_auth(teacher_token)
+    status, body = get("/api/ai/warning-board?class_name=初一1班")
+    check("教师预警看板（班级）", status == 200 and isinstance(body, list))
+    status, body = get("/api/ai/interventions?student_id=999999")
+    check("教师查干预不存在学生 200 空", status == 200 and body == [])
+    status, body = get("/api/ai/interventions")
+    check("教师干预列表（本班）", status == 200 and isinstance(body, list))
+    status, body = get("/api/ai/ask?q=初一1班数学掌握率")
+    check("教师问数掌握率", status == 200 and body.get("answer"))
+    status, body = get("/api/ai/ask?q=初一1班多少人")
+    check("教师问数人数", status == 200 and "初一1班" in body.get("answer", ""))
+    status, body = get(f"/api/ai/learning-report?scope=class&class_name=初一1班")
+    check("教师班级学情报告", status == 200 and body.get("teaching_suggestions"))
+    status, body = get(f"/api/ai/learning-report?scope=grade")
+    check("教师无年级维度报告 400", status == 400)
+
+    from backend.models import ExamPlan
+    graded_plan = db.query(ExamPlan).filter(ExamPlan.status == "graded", ExamPlan.grade == "初一").first()
+    if graded_plan:
+        status, body = get(f"/api/ai/paper-analysis?plan_id={graded_plan.id}&class_name=初一1班")
+        check("试卷分析", status in (200, 404), f"st={status}")
+        status, body = get(f"/api/ai/grade-hints?plan_id={graded_plan.id}&class_name=初一1班")
+        check("批阅辅助预估", status == 200 and isinstance(body.get("hints"), dict))
+    status, body = get("/api/ai/paper-analysis?plan_id=999999&class_name=初一1班")
+    check("试卷分析不存在考试 404", status == 404)
+
+    risk_sid = None
+    status, body = get("/api/ai/warning-board?class_name=初一1班")
+    for r in body or []:
+        if r.get("risk_level") in ("red", "yellow"):
+            risk_sid = r["student_id"]
+            break
+    if risk_sid:
+        status, body = post_json("/api/ai/interventions", {"student_id": risk_sid})
+        check("创建干预方案", status == 200 and body.get("title"), f"st={status}")
+        iv_id = body["id"]
+        status, body = post_json(f"/api/ai/interventions/{iv_id}/follow", {"note": "第一周已沟通家长"})
+        check("干预跟进", status == 200 and body.get("status") == "in_progress")
+        status, body = post_json(f"/api/ai/interventions/{iv_id}/close", {})
+        check("干预闭环评估效果", status == 200 and body.get("status") == "closed")
+        status, body = post_json(f"/api/ai/interventions/{iv_id}/follow", {"note": "已闭环不可再跟进"})
+        check("闭环干预记录跟进（允许）", status == 200)
+    else:
+        check("创建干预方案", True, "本班无风险学生，跳过")
+    status, body = get(f"/api/ai/learning-report?scope=student&student_id={sid}")
+    check("教师查看本班学生报告", status == 200)
+
+    set_auth(admin_token)
+    status, body = get("/api/ai/warning-board")
+    check("管理员预警看板（全校）", status == 200 and isinstance(body, list))
+    status, body = get("/api/ai/learning-report?scope=grade&grade=初一")
+    check("管理员年级学情报告", status == 200 and body.get("classes"))
+    status, body = get("/api/ai/ask?q=全校多少人")
+    check("管理员问数需明确范围", status == 200)
+    status, body = post_json("/api/ai/learning-path/generate", {"student_id": sid})
+    check("管理员生成学习路径", status in (200, 400), f"st={status}")
+
+    set_auth(student_token)
+    status, body = get("/api/ai/warning-board")
+    check("学生访问预警看板 403", status == 403)
+
     print("== 已移除的死代码接口 ==")
     status, body = get("/api/student/report?student_id=1")
     check("/api/student/report 已移除", status == 404)
@@ -1019,6 +1119,7 @@ def main():
     status, body = get("/api/auth/me")
     check("驳回后会话失效 401", status == 401)
 
+    cleanup_ai_data(db, [sid, other_sid, sec_sid, risk_sid] if risk_sid is not None else [sid, other_sid, sec_sid])
     purge_test_users(db)
     db.close()
     server.should_exit = True

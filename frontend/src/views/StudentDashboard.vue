@@ -38,6 +38,9 @@
         <span>{{ profile.warnings.join('; ') }}</span>
       </div>
 
+      <AiReport scope="student" :student-id="myStudentId" />
+
+
       <div class="full-grid">
         <div class="glass-card chart-card" v-reveal="{ delay: 120 }">
           <div class="card-header">
@@ -154,7 +157,10 @@
         </div>
       </div>
 
-      <ComprehensiveCard :semester-stats="summary.semesterStats" :awards="summary.awards" :activities="summary.activities" />
+      <CompanionChat :student-id="myStudentId" />
+
+      <GrowthNarrative :student-id="myStudentId" />
+      <TalentDiscovery :student-id="myStudentId" />
 
       <div class="glass-card chart-card" v-reveal="{ delay: 60 }">
         <div class="card-header">
@@ -234,9 +240,10 @@
               <circle cx="12" cy="10" r="0.5" fill="var(--accent)"/>
               <circle cx="15" cy="10" r="0.5" fill="var(--accent)"/>
             </svg>
-           个性化建议
+            AI 学习路径
         </div>
-        <TypedSuggestions :suggestions="profile.suggestions || []" />
+        <LearningPath :student-id="myStudentId" />
+
       </div>
       </div>
     </template>
@@ -260,8 +267,11 @@ import RadarChart from '../components/RadarChart.vue'
 import ScoreChart from '../components/ScoreChart.vue'
 import EmotionChart from '../components/EmotionChart.vue'
 import ExamReview from '../components/ExamReview.vue'
-import ComprehensiveCard from '../components/ComprehensiveCard.vue'
-import TypedSuggestions from '../components/TypedSuggestions.vue'
+import AiReport from '../components/AiReport.vue'
+import LearningPath from '../components/LearningPath.vue'
+import CompanionChat from '../components/CompanionChat.vue'
+import GrowthNarrative from '../components/GrowthNarrative.vue'
+import TalentDiscovery from '../components/TalentDiscovery.vue'
 import QualityChart from '../components/QualityChart.vue'
 import PageSkeleton from '../components/PageSkeleton.vue'
 import CountUp from '../components/CountUp.vue'

@@ -30,6 +30,15 @@
         <span>{{ profile.warnings.join('; ') }}</span>
       </div>
 
+      <AiReport scope="student" :student-id="detailStudentId" />
+
+      <div class="half-grid">
+        <GrowthNarrative :student-id="detailStudentId" />
+        <TalentDiscovery :student-id="detailStudentId" />
+      </div>
+
+      <CompanionChat :student-id="detailStudentId" read-only />
+
       <div class="full-grid">
         <div class="glass-card chart-card" v-reveal="{ delay: 120 }">
           <div class="card-header">
@@ -136,6 +145,10 @@ import EmotionChart from '../components/EmotionChart.vue'
 import ExamReview from '../components/ExamReview.vue'
 import ComprehensiveCard from '../components/ComprehensiveCard.vue'
 import TypedSuggestions from '../components/TypedSuggestions.vue'
+import AiReport from '../components/AiReport.vue'
+import GrowthNarrative from '../components/GrowthNarrative.vue'
+import TalentDiscovery from '../components/TalentDiscovery.vue'
+import CompanionChat from '../components/CompanionChat.vue'
 import QualityChart from '../components/QualityChart.vue'
 import PageSkeleton from '../components/PageSkeleton.vue'
 import CountUp from '../components/CountUp.vue'
@@ -162,6 +175,7 @@ const weakestSubject = computed(() => {
   if (!profile.value?.weakness?.length) return ''
   return profile.value.weakness[0].split('-')[0] || ''
 })
+const detailStudentId = computed(() => Number(route.params.id) || 0)
 
 const semesterGroupOptions = computed(() => semesterGroups(semesters.value))
 

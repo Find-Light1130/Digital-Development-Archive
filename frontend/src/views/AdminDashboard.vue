@@ -28,6 +28,11 @@
         </div>
       </div>
 
+      <div class="half-grid">
+        <WarningBoard />
+        <AiAsk />
+      </div>
+
       <div class="glass-card" style="padding:0">
         <div class="table-header">各年级详情</div>
         <el-table :data="gradeTable" highlight-current-row class="glass-table" style="width:100%">
@@ -315,6 +320,8 @@ import CountUp from '../components/CountUp.vue'
 import FailCard from '../components/FailCard.vue'
 import DistributionChart from '../components/DistributionChart.vue'
 import GrowthIndexTip from '../components/GrowthIndexTip.vue'
+import WarningBoard from '../components/WarningBoard.vue'
+import AiAsk from '../components/AiAsk.vue'
 
 const route = useRoute()
 

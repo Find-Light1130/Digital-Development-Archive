@@ -11,6 +11,7 @@ from backend.routes.auth import router as auth_router, _hash_password
 from backend.routes.student_api import router as student_router
 from backend.routes.teacher_api import router as teacher_router
 from backend.routes.admin_api import router as admin_router
+from backend.routes.ai_api import router as ai_router
 
 _DOCS_ENABLED = os.environ.get("ENABLE_DOCS") == "1"
 app = FastAPI(
@@ -62,6 +63,7 @@ app.include_router(student_router)
 app.include_router(teacher_router)
 app.include_router(admin_router)
 app.include_router(auth_router)
+app.include_router(ai_router)
 
 
 @app.on_event("startup")

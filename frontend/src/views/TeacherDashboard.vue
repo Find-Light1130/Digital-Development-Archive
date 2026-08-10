@@ -63,6 +63,13 @@
         </el-table>
       </div>
 
+      <div class="half-grid">
+        <WarningBoard :class-name="className" />
+        <AiAsk />
+      </div>
+
+      <AiReport scope="class" :class-name="className" />
+
       <div class="glass-card event-card">
         <div class="card-header">
           <svg viewBox="0 0 24 24" width="16" height="16" style="margin-right:6px;flex-shrink:0">
@@ -513,6 +520,9 @@
             </div>
           </div>
         </div>
+
+        <div class="stats-ai-divider">AI 试卷分析</div>
+        <PaperAnalysisPanel v-if="examStatsPlan" :plan-id="examStatsPlan.id" :class-name="className" />
       </template>
       <template #footer>
         <el-button class="btn-primary" @click="examStatsDialog = false">关闭</el-button>
@@ -550,6 +560,10 @@ import PageSkeleton from '../components/PageSkeleton.vue'
 import CountUp from '../components/CountUp.vue'
 import FailCard from '../components/FailCard.vue'
 import EmptyState from '../components/EmptyState.vue'
+import WarningBoard from '../components/WarningBoard.vue'
+import AiAsk from '../components/AiAsk.vue'
+import AiReport from '../components/AiReport.vue'
+import PaperAnalysisPanel from '../components/PaperAnalysisPanel.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -1548,6 +1562,7 @@ watch(() => overview.value, () => { trendHoveredColumn.value = '' })
 .stats-rank-row.top3 .stats-rank-idx { color: var(--accent); }
 .stats-rank-name { flex: 1; min-width: 0; color: var(--text-primary); }
 .stats-rank-score { color: var(--accent); font-weight: 600; }
+.stats-ai-divider { margin: 14px 0 10px; padding-top: 14px; border-top: 1px dashed var(--glass-border); font-size: 12px; font-weight: 600; color: var(--accent); }
 
 
 .chart-area { flex: 1; min-width: 0; width: auto; }

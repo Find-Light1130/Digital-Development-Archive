@@ -149,6 +149,56 @@ class ExamPlan(Base):
     __table_args__ = (Index("ix_exam_plans_grade_status", "grade", "status"),)
 
 
+class Intervention(Base):
+    """AI 预警干预闭环：预警→方案→执行→效果追踪。"""
+    __tablename__ = "interventions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    category = Column(String, nullable=False)  # 成绩 / 学业 / 心理 / 考勤
+    level = Column(String, nullable=False)  # red / yellow
+    title = Column(String, nullable=False)
+    plan_text = Column(String, nullable=False)
+    target = Column(String, nullable=True)
+    milestones = Column(String, nullable=True)  # JSON 数组文本
+    status = Column(String, default="open", nullable=False)  # open / in_progress / closed
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+    closed_at = Column(DateTime, nullable=True)
+    baseline_index = Column(Float, nullable=True)  # 干预创建时的成长指数
+    current_index = Column(Float, nullable=True)  # 关闭时复测的成长指数
+    effect = Column(Float, nullable=True)  # 前后差值
+    follow_notes = Column(String, nullable=True)  # 跟进记录（JSON 数组文本）
+    __table_args__ = (Index("ix_interventions_status", "status"),)
+
+
+class CompanionChat(Base):
+    """AI 心理树洞对话记录（用户/助手消息）。"""
+    __tablename__ = "companion_chats"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    role = Column(String, nullable=False)  # user / assistant / system
+    message = Column(String, nullable=False)
+    intent = Column(String, nullable=True)
+    risk_flag = Column(Integer, default=0)  # 0/1 高风险标记
+    created_at = Column(DateTime, default=datetime.now)
+    __table_args__ = (Index("ix_companion_student", "student_id", "created_at"),)
+
+
+class LearningPlan(Base):
+    """AI 个性化学习路径（每周计划，items 以 JSON 文本存储）。"""
+    __tablename__ = "learning_plans"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    semester = Column(String, nullable=False)
+    week_start = Column(Date, nullable=False)
+    title = Column(String, nullable=False)
+    goals = Column(String, nullable=True)  # JSON 数组
+    items = Column(String, nullable=False)  # JSON 数组
+    status = Column(String, default="active", nullable=False)  # active / completed
+    created_at = Column(DateTime, default=datetime.now)
+    __table_args__ = (Index("ix_learning_plan_student", "student_id", "week_start"),)
+
+
 def init_db():
     Base.metadata.create_all(engine)
 
