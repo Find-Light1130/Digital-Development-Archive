@@ -21,15 +21,15 @@
 - **后端**：FastAPI + SQLAlchemy + SQLite，入口 `backend/app.py`，路由按角色拆分在 `backend/routes/`。
 - **共享模块**：`backend/constants.py`（9 档等级阈值/学期顺序/日期→学期映射/每学期科目集与满分/考试类型/获奖级别，等级与科目的唯一来源）、`backend/cache.py`（TTL 300s 缓存，key=`indices`，写操作后需 `invalidate`）。
 - **前端**：Vue3 + Element Plus + ECharts，入口 `frontend/src/main.js`，页面在 `frontend/src/views/`。
-- **AI**：`backend/ai_modules/analysis.py`，含成长指数加权计算、预警检测、个性化建议、`batch_growth_profiles(ids, db, light=True)` 批量画像。
+- **AI**：`backend/ai_modules/analysis.py`（成长指数加权、预警检测、个性化建议、`batch_growth_profiles(ids, db, light=True)` 批量画像）；`backend/ai_modules/` 另有 AI 能力模块（学情报告/成长叙事/特长发现/心理树洞/预警干预闭环/学习路径/试卷分析/教师问数），由 `backend/routes/ai_api.py`（前缀 `/api/ai`）统一暴露，写操作在 `models.py` 的 `interventions`/`companion_chats`/`learning_plans` 表。
 
 ## 数据
 
 - 数据库 `data/school.db`（SQLite），由 `raw_data_gen.py` 生成 1050 条学生样本。
 - CSV 导出在 `data/sample_data/`。
-- 表：`students`, `scores`（九大学科）, `quality_scores`（音体美信多维评估）, `attendance`, `emotions`（含可空 `tags` 心情标签列）, `activities`, `awards`, `exam_plans`（考试规划，状态 `planned→conducted→graded`）。
+- 表：`students`, `scores`（九大学科）, `quality_scores`（音体美信多维评估）, `attendance`, `emotions`（含可空 `tags` 心情标签列）, `activities`, `awards`, `exam_plans`（考试规划，状态 `planned→conducted→graded`）, `interventions`（预警干预闭环）, `companion_chats`（心理树洞）, `learning_plans`（个性化学习路径）。
 - `class_name` 格式为 `"初一1班"`（年级+序号+班），前端下拉与此格式一致，正则 `^[初高][一二三]\d+班$`。
-- 索引：`ix_students_class`、`ix_scores_student_semester`、`ix_quality_student_semester`、`ix_exam_plans_grade_status`。
+- 索引：`ix_students_class`、`ix_scores_student_semester`、`ix_quality_student_semester`、`ix_exam_plans_grade_status`、`ix_interventions_status`、`ix_companion_student`、`ix_learning_plan_student`。
 
 ## 错误契约
 
