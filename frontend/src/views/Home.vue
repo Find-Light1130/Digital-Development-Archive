@@ -199,7 +199,7 @@ const tech = [
 
 function doLogout() {
   clearAuth()
-  window.location.href = '/'
+  window.location.href = window.location.pathname + '#/'
 }
 </script>
 

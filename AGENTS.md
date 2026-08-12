@@ -18,6 +18,14 @@
 顺序：先生成数据 → 再启动后端 → 最后启动前端（Vite 代理 `/api` 到 8000）。
 也可使用一键脚本：Windows 执行 `start.ps1`，Mac/Linux 执行 `start.sh`（均绑定 127.0.0.1）。
 
+## GitHub Pages 部署（静态前端）
+
+- 前端可构建后发布到 GitHub Pages（纯静态托管，FastAPI 后端需另行部署，GH Pages 无后端/无代理）。
+- 构建配置：`vite.config.js` 已设 `base: './'`（相对路径，适配仓库子路径）；路由为 hash 模式（`createWebHashHistory`，深链接无需服务端重写）。
+- 前端 API 地址由构建时环境变量 `VITE_API_BASE` 决定（见 `frontend/.env.example`）：默认 `/api`（本地 dev 代理），部署到 GH Pages 时须指向后端绝对地址（如 `https://host/api`）。
+- 后端跨域：`backend/app.py` 的 `ALLOWED_ORIGINS` 可通过 `CORS_ORIGINS` 环境变量追加（逗号分隔），部署后端时须包含 GH Pages 站点 origin。
+- 自动部署：`.github/workflows/deploy.yml` 在 push master 时构建 `frontend/dist` 并发布 GH Pages（从仓库 Settings→Pages 启用，Source 选 GitHub Actions）。
+
 ## 架构
 
 - **后端**：FastAPI + SQLAlchemy + SQLite，入口 `backend/app.py`，路由按角色拆分在 `backend/routes/`。

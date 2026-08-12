@@ -26,6 +26,8 @@ ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+_CORS_EXTRA = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
+ALLOWED_ORIGINS.extend(_CORS_EXTRA)
 
 app.add_middleware(
     CORSMiddleware,

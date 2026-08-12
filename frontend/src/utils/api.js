@@ -1,7 +1,9 @@
 import axios from 'axios'
 import { getToken, clearAuth } from './auth'
 
-const api = axios.create({ baseURL: '/api' })
+const API_BASE = import.meta.env.VITE_API_BASE || '/api'
+
+const api = axios.create({ baseURL: API_BASE })
 
 api.interceptors.request.use((config) => {
   const token = getToken()
@@ -14,8 +16,8 @@ api.interceptors.response.use(
   (err) => {
     if (err?.response?.status === 401 && getToken()) {
       clearAuth()
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
+      if (!window.location.hash.startsWith('#/login')) {
+        window.location.href = window.location.pathname + '#/login'
       }
     }
     return Promise.reject(err)
@@ -358,7 +360,7 @@ export function consumeSSE(url, handlers = {}, extraHeaders = {}) {
     const headers = { ...extraHeaders }
     if (token) headers.Authorization = `Bearer ${token}`
 
-    fetch(`/api${url}`, { headers, method: 'GET' })
+    fetch(`${API_BASE}${url}`, { headers, method: 'GET' })
       .then((res) => {
         if (!res.ok) {
           return res.json().then((b) => reject(new Error(b?.detail || `HTTP ${res.status}`))).catch(() =>
@@ -414,7 +416,7 @@ export function companionChatStream(studentId, message, handlers) {
   return new Promise((resolve, reject) => {
     const token = getToken()
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-    fetch('/api/ai/companion/chat/stream', { method: 'POST', headers, body: JSON.stringify({ student_id: studentId, message }) })
+    fetch(`${API_BASE}/ai/companion/chat/stream`, { method: 'POST', headers, body: JSON.stringify({ student_id: studentId, message }) })
       .then((res) => {
         if (!res.ok) {
           return res.json().then((b) => reject(new Error(b?.detail || `HTTP ${res.status}`))).catch(() =>
