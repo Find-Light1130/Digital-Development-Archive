@@ -16,6 +16,23 @@
     <div v-if="loading" class="wb-loading"><el-skeleton :rows="4" animated /></div>
 
     <template v-else>
+      <div v-if="alerts.length" class="wb-crisis">
+        <div class="crisis-title">
+          <span class="crisis-dot"></span> 树洞危机提醒（{{ alerts.length }}）
+        </div>
+        <div v-for="a in alerts" :key="a.student_id + a.created_at" class="crisis-row" @click="openDetail(a.student_id)">
+          <span class="wb-badge red">危</span>
+          <div class="crisis-main">
+            <div class="crisis-top">
+              <span class="wb-name">{{ a.name }}</span>
+              <span class="wb-class">{{ a.class_name }}</span>
+              <span class="crisis-time">{{ fmtTime(a.created_at) }}</span>
+            </div>
+            <div class="crisis-msg">{{ a.message }}</div>
+          </div>
+        </div>
+      </div>
+
       <div v-if="!rows.length" class="wb-empty">当前范围内没有{{ level === 'all' ? '高' : '' }}风险学生</div>
       <div v-else class="wb-table">
         <div v-for="r in rows" :key="r.student_id" class="wb-row">
@@ -47,7 +64,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { getWarningBoard } from '../utils/api'
+import { getWarningBoard, getCompanionAlerts } from '../utils/api'
 import InterventionPanel from './InterventionPanel.vue'
 
 const props = defineProps({
@@ -57,6 +74,7 @@ const props = defineProps({
 
 const router = useRouter()
 const rows = ref([])
+const alerts = ref([])
 const loading = ref(false)
 const level = ref('all')
 const ivOpen = ref(false)
@@ -82,10 +100,15 @@ const filtered = computed(() => {
 async function load() {
   loading.value = true
   try {
-    const { data } = await getWarningBoard({ className: props.className, grade: props.grade })
-    rows.value = data
+    const [{ data }, alertResp] = await Promise.allSettled([
+      getWarningBoard({ className: props.className, grade: props.grade }),
+      getCompanionAlerts(20),
+    ])
+    rows.value = data ?? []
+    alerts.value = alertResp.status === 'fulfilled' ? (alertResp.value?.data ?? []) : []
   } catch (e) {
     rows.value = []
+    alerts.value = []
   } finally {
     loading.value = false
   }
@@ -101,6 +124,13 @@ function openIntervention(r) {
 function openDetail(id) {
   router.push({ path: `/teacher/student/${id}`, query: { class: props.className } })
 }
+
+function fmtTime(t) {
+  if (!t) return ''
+  const d = new Date(t)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getMonth() + 1}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 </script>
 
 <style scoped>
@@ -110,6 +140,16 @@ function openDetail(id) {
 .filter-tab.active { color: var(--warning); border-color: var(--warning); }
 .wb-loading { padding: 8px 2px; }
 .wb-empty { color: var(--text-label); font-size: 13px; padding: 16px 0; text-align: center; }
+.wb-crisis { margin: 4px 0 10px; border: 1px solid rgba(248, 113, 113, 0.35); background: rgba(248, 113, 113, 0.06); border-radius: 10px; padding: 8px 12px; }
+.crisis-title { font-size: 12px; font-weight: 600; color: var(--danger); display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.crisis-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); display: inline-block; animation: blink 1.4s infinite; }
+.crisis-row { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px dashed rgba(248, 113, 113, 0.25); cursor: pointer; }
+.crisis-row:last-child { border: none; }
+.crisis-main { flex: 1; min-width: 0; }
+.crisis-top { display: flex; align-items: center; gap: 8px; }
+.crisis-time { font-size: 11px; color: var(--text-label); margin-left: auto; }
+.crisis-msg { font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@keyframes blink { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
 .wb-row { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--glass-border); }
 .wb-row:last-child { border: none; }
 .wb-badge { width: 22px; height: 22px; min-width: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; margin-top: 2px; }

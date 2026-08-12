@@ -15,7 +15,7 @@
       <div class="ai-summary">{{ report.summary || report.paragraph }}</div>
 
       <!-- 学生级：科目掌握度矩阵 -->
-      <div v-if="report.subjects" class="subj-block">
+      <div v-if="scope === 'student' && report.subjects" class="subj-block">
         <div class="sub-title">科目掌握度</div>
         <div class="subj-grid">
           <div v-for="s in report.subjects" :key="s.subject" class="subj-card" :class="'tone-' + toneOf(s)">
@@ -28,7 +28,7 @@
       </div>
 
       <!-- 班级级：科目平均掌握率排行 -->
-      <div v-else-if="report.subjects && report.class_name" class="subj-block">
+      <div v-if="scope === 'class' && report.subjects" class="subj-block">
         <div class="sub-title">各科平均掌握率</div>
         <div class="rank-row" v-for="r in report.subjects" :key="r.subject">
           <span class="rank-name">{{ r.subject }}</span>
@@ -38,7 +38,7 @@
       </div>
 
       <!-- 年级级：班级对比 -->
-      <div v-if="report.classes" class="subj-block">
+      <div v-if="scope === 'grade' && report.classes" class="subj-block">
         <div class="sub-title">各班平均成长指数</div>
         <div class="rank-row" v-for="c in report.classes" :key="c.class_name">
           <span class="rank-name">{{ c.class_name }}</span>
@@ -77,7 +77,7 @@
       </div>
     </template>
 
-    <EmptyState v-else-if="error" icon="search" title="报告生成失败" :hint="error" />
+    <EmptyState v-else icon="search" title="报告生成失败" :hint="error || '暂无足够数据生成报告'" />
   </div>
 </template>
 

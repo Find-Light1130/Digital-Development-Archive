@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+
+models/
+backend/ai_modules/model/
+
+node_modules/
+frontend/node_modules/.vite/

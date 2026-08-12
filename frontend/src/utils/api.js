@@ -293,6 +293,10 @@ export function sendCompanionMessage(studentId, message) {
   return api.post('/ai/companion/chat', { student_id: studentId, message })
 }
 
+export function getCompanionAlerts(limit = 20) {
+  return api.get('/ai/companion/alerts', { params: { limit } })
+}
+
 export function getWarningBoard({ className, grade, level } = {}) {
   const params = {}
   if (className) params.class_name = className
@@ -342,4 +346,118 @@ export function getGradeHints(planId, className) {
 
 export function askAI(query) {
   return api.get('/ai/ask', { params: { q: query } })
+}
+
+// ---------------------------------------------------------------- SSE 流式
+
+/**
+ * 通用 SSE 消费者：用 fetch 读取 text/event-stream 并分发事件。
+ * @param {string} url 相对 /api 的路径（含 query string）
+ * @param {object} handlers { onStage(payload), onToken(payload), onDone(payload), onError(payload) }
+ * @returns {Promise} resolve 时携带 done payload
+ */
+export function consumeSSE(url, handlers = {}, extraHeaders = {}) {
+  return new Promise((resolve, reject) => {
+    const token = getToken()
+    const headers = { ...extraHeaders }
+    if (token) headers.Authorization = `Bearer ${token}`
+
+    fetch(`/api${url}`, { headers, method: 'GET' })
+      .then((res) => {
+        if (!res.ok) {
+          return res.json().then((b) => reject(new Error(b?.detail || `HTTP ${res.status}`))).catch(() =>
+            reject(new Error(`HTTP ${res.status}`)))
+        }
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder('utf-8')
+        let buf = ''
+
+        function pump() {
+          return reader.read().then(({ done, value }) => {
+            if (done) return resolve(null)
+            buf += decoder.decode(value, { stream: true })
+            // 按双换行切分 SSE 事件块
+            const parts = buf.split('\n\n')
+            buf = parts.pop()
+            for (const part of parts) {
+              let event = 'message'
+              let data = ''
+              for (const line of part.split('\n')) {
+                if (line.startsWith('event:')) event = line.slice(6).trim()
+                else if (line.startsWith('data:')) data += line.slice(5).trim()
+              }
+              let payload = null
+              try { payload = data ? JSON.parse(data) : null } catch (e) { payload = null }
+              if (!payload) continue
+              if (event === 'stage' && handlers.onStage) handlers.onStage(payload)
+              else if (event === 'token' && handlers.onToken) handlers.onToken(payload)
+              else if (event === 'done') {
+                if (handlers.onDone) handlers.onDone(payload)
+                return resolve(payload)
+              } else if (event === 'error') {
+                if (handlers.onError) handlers.onError(payload)
+                return reject(new Error(payload?.message || '处理出错'))
+              }
+            }
+            return pump()
+          })
+        }
+        pump().catch((e) => reject(e))
+      })
+      .catch((e) => reject(e))
+  })
+}
+
+/** SSE 流式问数 */
+export function askAIStream(query, handlers) {
+  return consumeSSE(`/ai/ask/stream?q=${encodeURIComponent(query)}`, handlers)
+}
+
+/** SSE 流式树洞对话（POST） */
+export function companionChatStream(studentId, message, handlers) {
+  return new Promise((resolve, reject) => {
+    const token = getToken()
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    fetch('/api/ai/companion/chat/stream', { method: 'POST', headers, body: JSON.stringify({ student_id: studentId, message }) })
+      .then((res) => {
+        if (!res.ok) {
+          return res.json().then((b) => reject(new Error(b?.detail || `HTTP ${res.status}`))).catch(() =>
+            reject(new Error(`HTTP ${res.status}`)))
+        }
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder('utf-8')
+        let buf = ''
+        function pump() {
+          return reader.read().then(({ done, value }) => {
+            if (done) return resolve(null)
+            buf += decoder.decode(value, { stream: true })
+            const parts = buf.split('\n\n')
+            buf = parts.pop()
+            for (const part of parts) {
+              let event = 'message'
+              let data = ''
+              for (const line of part.split('\n')) {
+                if (line.startsWith('event:')) event = line.slice(6).trim()
+                else if (line.startsWith('data:')) data += line.slice(5).trim()
+              }
+              let payload = null
+              try { payload = data ? JSON.parse(data) : null } catch (e) { payload = null }
+              if (!payload) continue
+              if (event === 'stage' && handlers.onStage) handlers.onStage(payload)
+              else if (event === 'token' && handlers.onToken) handlers.onToken(payload)
+              else if (event === 'done') {
+                if (handlers.onDone) handlers.onDone(payload)
+                return resolve(payload)
+              } else if (event === 'error') {
+                if (handlers.onError) handlers.onError(payload)
+                return reject(new Error(payload?.message || '处理出错'))
+              }
+            }
+            return pump()
+          })
+        }
+        pump().catch((e) => reject(e))
+      })
+      .catch((e) => reject(e))
+  })
 }

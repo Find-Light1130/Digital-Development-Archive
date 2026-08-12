@@ -112,6 +112,14 @@ def talent_analysis(db, student_id):
            if talents else "暂未识别出明显特长方向，建议多尝试社团与课外活动。")
     )
 
+    summary_polished = None
+    try:
+        from backend.ai_modules.llm_polish import polish
+        if talents:
+            summary_polished = polish(summary, tone="鼓励发掘、有针对性", max_tokens=250)
+    except Exception:  # noqa: BLE001
+        summary_polished = None
+
     return {
         "student_id": student_id,
         "name": student.name,
@@ -121,4 +129,5 @@ def talent_analysis(db, student_id):
         "awards": [{"level": a.level, "title": a.title, "date": str(a.date)} for a in awards[:5]],
         "talents": talents,
         "summary": summary,
+        "summary_polished": summary_polished,
     }

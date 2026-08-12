@@ -12,6 +12,8 @@
 | 前端冒烟测试 | `node test/frontend_tests.js` |
 | 数据/画像验证 | `python test/verify.py`、`python test/check.py` |
 | 性能验证 | `python test/perf_check.py` |
+| 意图模型训练 | `python backend/ai_modules/train_model.py` |
+| 安装依赖 | `pip install -r requirements.txt`（含 `llama-cpp-python`） |
 
 顺序：先生成数据 → 再启动后端 → 最后启动前端（Vite 代理 `/api` 到 8000）。
 也可使用一键脚本：Windows 执行 `start.ps1`，Mac/Linux 执行 `start.sh`（均绑定 127.0.0.1）。
@@ -22,6 +24,7 @@
 - **共享模块**：`backend/constants.py`（9 档等级阈值/学期顺序/日期→学期映射/每学期科目集与满分/考试类型/获奖级别，等级与科目的唯一来源）、`backend/cache.py`（TTL 300s 缓存，key=`indices`，写操作后需 `invalidate`）。
 - **前端**：Vue3 + Element Plus + ECharts，入口 `frontend/src/main.js`，页面在 `frontend/src/views/`。
 - **AI**：`backend/ai_modules/analysis.py`（成长指数加权、预警检测、个性化建议、`batch_growth_profiles(ids, db, light=True)` 批量画像）；`backend/ai_modules/` 另有 AI 能力模块（学情报告/成长叙事/特长发现/心理树洞/预警干预闭环/学习路径/试卷分析/教师问数），由 `backend/routes/ai_api.py`（前缀 `/api/ai`）统一暴露，写操作在 `models.py` 的 `interventions`/`companion_chats`/`learning_plans` 表。
+- **本地 LLM 层**：`backend/ai_modules/llm.py` 懒加载单例（`models/qwen2.5-0.5b-instruct-q4_k_m.gguf`，约 490MB，缺失时自动从 hf-mirror 下载，可用 `LLM_MODEL_URL`/`LLM_MODEL_FILE`/`LLM_N_THREADS` 覆盖）；**`generate`/`generate_stream` 全程持有进程级 `_gen_lock` 串行推理**——llama.cpp 单实例并发推理会 GGML_ASSERT 直接 abort 整个进程（曾导致后端整体崩溃、登录全挂），严禁并发调用；`llm_understanding.py`（意图/槽位 LLM 语义理解 + `enforce_scope` 权限收敛，模型不可用降级 `intent_model.py` TF-IDF 质心分类器，语料 `corpus.py`、训练 `train_model.py`）；`fact_blocks.py`（精确数据事实块，数字/名单一律来自数据层防幻觉）；`llm_polish.py`（文案润色，数字/结论禁止改动）；`thinking.py`（SSE 分阶段状态机）；`emotion_companion_llm.py`（树洞 LLM 共情回复 + 危机关键词红线，危机永不交给模型裁决）。流式接口 `/api/ai/ask/stream` 与 `/api/ai/companion/chat/stream` 走 SSE（`event: stage/token/done`），前端 `frontend/src/utils/api.js` 的 `consumeSSE` 消费。
 
 ## 数据
 
@@ -46,3 +49,4 @@
 - `emotions.tags` 列由 `app.py` 启动时幂等迁移（ALTER TABLE），无需重建库；若删库重建则直接含该列。
 - 若数据库损坏或需重建，删除 `data/school.db` 后重新运行 `raw_data_gen.py`。
 - 后端测试默认要求后端已在 8765 端口运行（见 `test/backend_tests.py` 顶部说明）。
+- LLM 权重与意图模型工件不入库：`models/*.gguf`（约 490MB，首次启动自动下载）、`backend/ai_modules/model/*.npz|meta.json`（由 `train_model.py` 生成）。改语料后需重训意图模型。

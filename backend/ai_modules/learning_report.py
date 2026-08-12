@@ -99,6 +99,16 @@ def _predict(subj_trend):
     return f"成绩走势平稳，预计下次考试维持在{nxt}%左右"
 
 
+def _polish_summary(summary, weak, strong, mastery_avg):
+    """LLM 润色总结；模型不可用时返回原模板。"""
+    try:
+        from backend.ai_modules.llm_polish import polish
+        tone = "温暖鼓励、有针对性" if weak else "简洁客观"
+        return polish(summary, tone=tone)
+    except Exception:  # noqa: BLE001
+        return summary
+
+
 # ---------------------------------------------------------------- 学生报告
 
 def student_report(db, student_id):
@@ -173,6 +183,8 @@ def student_report(db, student_id):
         + "。"
     )
 
+    polished = _polish_summary(summary, weak, strong, mastery_avg)
+
     return {
         "student_id": student_id,
         "name": student.name,
@@ -188,6 +200,7 @@ def student_report(db, student_id):
             "warnings": profile.get("warnings", []),
         },
         "summary": summary,
+        "summary_polished": polished,
         "subjects": subjects,
         "strengths": [s["subject"] for s in strong],
         "weaknesses": [s["subject"] for s in weak],
@@ -246,6 +259,11 @@ def class_report(db, class_name):
         + f"，最低为" + (f"{weak[0]}（{_avg([s['avg'] for s in subject_rows if s['subject']==weak[0]])}%）" if weak else "—")
         + "。"
     )
+    try:
+        from backend.ai_modules.llm_polish import polish
+        paragraph_polished = polish(paragraph, tone="专业客观")
+    except Exception:  # noqa: BLE001
+        paragraph_polished = paragraph
 
     return {
         "class_name": class_name,
@@ -259,6 +277,7 @@ def class_report(db, class_name):
         "weak_subjects": weak,
         "strong_subjects": strong,
         "paragraph": paragraph,
+        "paragraph_polished": paragraph_polished,
         "teaching_suggestions": teaching,
     }
 
@@ -299,6 +318,11 @@ def grade_report(db, grade):
         f"{grade}年级共{len(students)}名学生，平均成长指数{avg_index}分，共{len(class_rows)}个班级。"
         + (f"整体薄弱学科为{'、'.join(weak)}。" if weak else "各科整体掌握较为均衡。")
     )
+    try:
+        from backend.ai_modules.llm_polish import polish
+        paragraph_polished = polish(paragraph, tone="专业客观")
+    except Exception:  # noqa: BLE001
+        paragraph_polished = paragraph
     teaching = []
     if weak:
         teaching.append(f"年级共性薄弱学科为{'、'.join(weak)}，建议年级统一开展专项复习与错题讲评")
@@ -317,5 +341,6 @@ def grade_report(db, grade):
         "subjects": subject_rows,
         "weak_subjects": weak,
         "paragraph": paragraph,
+        "paragraph_polished": paragraph_polished,
         "teaching_suggestions": teaching,
     }

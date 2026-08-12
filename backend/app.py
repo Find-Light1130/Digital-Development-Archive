@@ -79,6 +79,11 @@ def on_startup():
         start_cache_warmup()
     except Exception:
         pass
+    try:
+        from backend.ai_modules import llm
+        llm.warmup()
+    except Exception:
+        pass
 
 
 def _migrate_indexes():

@@ -22,12 +22,15 @@
           <router-link v-if="user && user.role === 'grade_leader'" to="/grade-leader" class="nav-link" active-class="nav-active">
             <span class="nav-indicator"></span>年级工作台
           </router-link>
+          <router-link v-if="user && user.role === 'grade_leader'" to="/grade-leader/review" class="nav-link" active-class="nav-active">
+            <span class="nav-indicator"></span>教师审核
+          </router-link>
           <template v-if="user && user.role === 'admin'">
             <router-link to="/admin" class="nav-link" active-class="nav-active">
               <span class="nav-indicator"></span>管理端
             </router-link>
-            <router-link to="/admin#users" class="nav-link">
-              <span class="nav-indicator"></span>用户管理
+            <router-link to="/admin/review" class="nav-link" active-class="nav-active">
+              <span class="nav-indicator"></span>用户审核
             </router-link>
           </template>
           <router-link to="/help" class="nav-link" active-class="nav-active">
@@ -159,6 +162,15 @@ function refreshAuth() {
 }
 
 watch(() => route.fullPath, refreshAuth)
+
+watch(() => route.query.auto, (val) => {
+  if (val === '1') {
+    ElMessage.success('您已登录，已自动跳转到工作台')
+    const q = { ...route.query }
+    delete q.auto
+    router.replace({ path: route.path, query: q })
+  }
+})
 
 async function doLogout() {
   if (loggingOut.value) return

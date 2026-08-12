@@ -82,12 +82,21 @@ def growth_narrative(db, student_id):
         stage_sentence = "建议先从作息、运动和情绪入手稳住状态，再逐步恢复学习节奏，不必急于求成。"
     paragraphs.append(f"{stage}的小目标很简单：{stage_sentence}")
 
+    polished = None
+    try:
+        from backend.ai_modules.llm_polish import polish
+        combined = "".join(paragraphs)
+        polished = polish(combined, tone="温暖有故事感，像一段成长寄语", max_tokens=350)
+    except Exception:  # noqa: BLE001
+        polished = None
+
     return {
         "student_id": student_id,
         "name": student.name,
         "class_name": student.class_name,
         "growth_index": gi,
         "paragraphs": paragraphs,
+        "narrative_polished": polished,
         "aspects": aspects,
         "strengths": strengths,
         "weakness": profile.get("weakness", []),

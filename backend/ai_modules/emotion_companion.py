@@ -12,8 +12,26 @@ from backend.ai_modules.common import load_emotions, subject_mastery
 
 # ---------------------------------------------------------------- 意图识别
 
+# 危机信号按类型分组：self_harm（自伤/轻生）、harm_others（伤人/毁灭）、hopeless（绝望感）
+_CRISIS_KEYWORDS = {
+    "self_harm": [
+        "自杀", "想死", "轻生", "不想活", "不想活", "活不下去", "活够了", "不想存在",
+        "伤害自己", "自残", "割腕", "结束生命", "了结自己", "一了百了", "想消失",
+        "结束自己", "不想再见", "去死", "跳楼", "了结",
+    ],
+    "harm_others": [
+        "毁灭世界", "杀人", "杀了", "杀光", "报复社会", "同归于尽", "伤害别人",
+        "我要弄死", "拉人垫背", "炸了学校", "报复他们",
+    ],
+    "hopeless": [
+        "没有意义", "活着没意思", "活着没劲", "活着没意思", "撑不下去", "熬不下去了",
+        "不知道活着为了什么", "活着好累", "活着真没意思", "人生没意思", "活得好没意思",
+        "活着没盼头",
+    ],
+}
+
 _INTENT_KEYWORDS = {
-    "crisis": ["自杀", "想死", "活不下去", "伤害自己", "不想活", "自残", "结束生命", "没有意义", "不想存在"],
+    "crisis": [kw for group in _CRISIS_KEYWORDS.values() for kw in group],
     "greet": ["你好", "您好", "hi", "嗨", "hello", "哈喽", "在吗", "在么", "你好呀"],
     "sad": ["难过", "伤心", "不开心", "沮丧", "郁闷", "想哭", "哭", "低落", "emo", "委屈", "失落", "消沉", "心情不好"],
     "anxious": ["焦虑", "紧张", "压力", "害怕", "担心", "烦躁", "慌", "不安", "失眠", "睡不着", "心慌", "恐慌"],
@@ -33,12 +51,28 @@ _INTENTS_ORDER = ["crisis", "greet", "sad", "anxious", "angry", "tired",
 
 
 def detect_intent(message: str):
+    """返回 (intent, keyword)。危机命中时 keyword 为命中的信号词，并附带危机类型。
+
+    设计：危机关键词按类型分组（_CRISIS_KEYWORDS），命中后据分组判定
+    crisis_type（self_harm/harm_others/hopeless），供通报与安抚话术区分。
+    """
     text = (message or "").lower()
+    if any(kw in text for kw in _CRISIS_KEYWORDS["self_harm"]):
+        kw = next(k for k in _CRISIS_KEYWORDS["self_harm"] if k in text)
+        return "crisis", kw, "self_harm"
+    if any(kw in text for kw in _CRISIS_KEYWORDS["harm_others"]):
+        kw = next(k for k in _CRISIS_KEYWORDS["harm_others"] if k in text)
+        return "crisis", kw, "harm_others"
+    if any(kw in text for kw in _CRISIS_KEYWORDS["hopeless"]):
+        kw = next(k for k in _CRISIS_KEYWORDS["hopeless"] if k in text)
+        return "crisis", kw, "hopeless"
     for intent in _INTENTS_ORDER:
+        if intent == "crisis":
+            continue
         for kw in _INTENT_KEYWORDS[intent]:
             if kw in text:
-                return intent, kw
-    return "chat", None
+                return intent, kw, None
+    return "chat", None, None
 
 
 # ---------------------------------------------------------------- 情绪风险分级
@@ -189,13 +223,14 @@ def _context_note(db, student_id, intent):
 
 
 def companion_reply(db, student_id, message):
-    intent, kw = detect_intent(message)
+    intent, kw, crisis_type = detect_intent(message)
     risk_flag = intent == "crisis"
     risk = emotion_risk(db, student_id)
 
     if intent == "crisis":
         reply = random.choice(_CRISIS)
         return {"reply": reply, "intent": intent, "risk_flag": True,
+                "crisis_type": crisis_type, "keyword": kw,
                 "risk": risk, "emergency": True, "escalate": True}
 
     pools = {

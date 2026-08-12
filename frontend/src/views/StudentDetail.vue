@@ -1,12 +1,14 @@
 <template>
   <div class="dashboard" :class="{ 'is-refreshing': loading }">
-    <el-button class="btn-secondary back-btn no-print" @click="goBack">
-      <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right:4px">
-        <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      返回班级面板
-    </el-button>
-    <el-button v-if="profile" class="btn-secondary back-btn no-print" @click="printReport" style="margin-left:8px">打印成绩单</el-button>
+    <div class="detail-actions no-print">
+      <el-button class="btn-secondary back-btn" @click="goBack">
+        <svg viewBox="0 0 24 24" width="14" height="14" style="margin-right:4px">
+          <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        {{ backLabel }}
+      </el-button>
+      <el-button v-if="profile" class="btn-secondary back-btn" @click="printReport">打印成绩单</el-button>
+    </div>
 
     <PageSkeleton v-if="loading && !profile" :kpis="4" :charts="4" />
 
@@ -137,6 +139,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { getStoredUser } from '../utils/auth'
 import { getStudentDetails, getStudentScores, getStudentEmotions, getStudentSemesters, getStudentSummary, getStudentQuality, requestErrorText } from '../utils/api'
 import { semesterGroups } from '../utils/semesters'
 import RadarChart from '../components/RadarChart.vue'
@@ -176,6 +179,11 @@ const weakestSubject = computed(() => {
   return profile.value.weakness[0].split('-')[0] || ''
 })
 const detailStudentId = computed(() => Number(route.params.id) || 0)
+
+const backLabel = computed(() => {
+  const role = getStoredUser()?.role
+  return role === 'admin' ? '返回管理页面' : '返回班级面板'
+})
 
 const semesterGroupOptions = computed(() => semesterGroups(semesters.value))
 
@@ -243,6 +251,11 @@ function showExamReview(exam) {
 }
 
 function goBack() {
+  const role = getStoredUser()?.role
+  if (role === 'admin') {
+    router.push('/admin')
+    return
+  }
   const cls = route.query.class || sessionStorage.getItem('teacherClass')
   if (cls) sessionStorage.setItem('teacherClass', cls)
   if (window.history.length > 1) {
@@ -260,7 +273,8 @@ function printReport() {
 <style scoped>
 .dashboard { display: flex; flex-direction: column; gap: 16px; transition: opacity 0.3s ease; }
 .dashboard.is-refreshing { opacity: 0.6; }
-.back-btn { align-self: flex-start; margin-bottom: 4px; display: flex; align-items: center; }
+.detail-actions { display: flex; align-items: center; gap: 8px; }
+.back-btn { display: flex; align-items: center; }
 .kpi-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
 .kpi-card { padding: 20px; text-align: center; }
 .kpi-name { font-size: 22px; font-weight: 700; color: var(--accent); }

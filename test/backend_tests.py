@@ -48,6 +48,45 @@ def _request(method, path, data=None, json_data=None):
         return e.code, json.loads(e.read().decode("utf-8"))
 
 
+def sse_get(path):
+    """读取 SSE 流并返回 (status, 原始文本)。"""
+    headers = {}
+    if AUTH_TOKEN:
+        headers["Authorization"] = f"Bearer {AUTH_TOKEN}"
+    url = BASE + urllib.parse.quote(path, safe="/:?=&%")
+    req = urllib.request.Request(url, data=None, method="GET", headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return r.status, r.read().decode("utf-8")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8")
+
+
+def sse_post_json(path, data):
+    """POST JSON 并读取 SSE 流，返回 (status, 原始文本)。"""
+    headers = {"Content-Type": "application/json"}
+    if AUTH_TOKEN:
+        headers["Authorization"] = f"Bearer {AUTH_TOKEN}"
+    url = BASE + path
+    req = urllib.request.Request(
+        url, data=json.dumps(data).encode("utf-8"), method="POST", headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return r.status, r.read().decode("utf-8")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8")
+
+
+def sse_event_counts(text):
+    """统计 SSE 文本中各事件类型出现次数。"""
+    counts = {}
+    for line in (text or "").split("\n"):
+        if line.startswith("event:"):
+            ev = line[len("event:"):].strip()
+            counts[ev] = counts.get(ev, 0) + 1
+    return counts
+
+
 def get(path):
     return _request("GET", path)
 
@@ -160,7 +199,7 @@ def wait_ready():
 
 def main():
     from backend.app import app
-    from backend.models import init_db, SessionLocal, Student, User
+    from backend.models import init_db, SessionLocal, Student, User, Intervention
     import uvicorn
 
     init_db()
@@ -227,7 +266,8 @@ def main():
     student_token = login("t_student", "Abc12345")
     teacher_token = login("t_teacher", "Abc12345")
     leader_token = login("t_leader", "Abc12345")
-    check("审核后各角色可登录", student_token and teacher_token and leader_token)
+    teacher2_token = login("t_teacher2", "Abc12345")
+    check("审核后各角色可登录", student_token and teacher_token and leader_token and teacher2_token)
 
     print("== 学生端 ==")
     set_auth(student_token)
@@ -971,7 +1011,7 @@ def main():
     check("学习路径获取", status in (200, 404))
     status, body = post_json("/api/ai/companion/chat", {"student_id": sid, "message": "最近压力好大"})
     check("树洞对话回复", status == 200 and body.get("reply"))
-    check("树洞对话含意图", body.get("intent") in ("anxious", "sad", "angry", "bored", "happy", "general"))
+    check("树洞对话含意图", body.get("intent") in ("crisis", "greet", "sad", "anxious", "angry", "tired", "study", "friend", "family", "advice", "thanks", "bye", "chat"))
     status, body = post_json("/api/ai/companion/chat", {"student_id": sid, "message": ""})
     check("树洞空消息 400", status == 400)
     status, body = post_json("/api/ai/companion/chat", {"student_id": other_sid, "message": "偷看别人树洞"})
@@ -979,7 +1019,43 @@ def main():
     status, body = get(f"/api/ai/companion/history?student_id={sid}&limit=10")
     check("树洞历史返回", status == 200 and isinstance(body, list))
 
+    # 树洞危机红线：命中即 risk_flag + 危机类型 + 自动建干预
+    # 先清理历史遗留干预，保证幂等逻辑前状态确定（可重复运行）
+    cleanup_ai_data(db, [sid, other_sid])
+    status, body = post_json("/api/ai/companion/chat", {"student_id": sid, "message": "我想自杀，活不下去了"})
+    check("树洞危机红线命中", status == 200 and body.get("risk_flag") and body.get("crisis_type") == "self_harm")
+    check("危机自动建干预", body.get("intervention_id") is not None, f"iv_id={body.get('intervention_id')}")
+
+    # 危机红线三分级：self_harm / harm_others / hopeless 各自独立识别
+    status, body = post_json("/api/ai/companion/chat", {"student_id": sid, "message": "我要毁灭世界报复社会"})
+    check("危机红线伤人型", status == 200 and body.get("risk_flag") and body.get("crisis_type") == "harm_others")
+    status, body = post_json("/api/ai/companion/chat", {"student_id": sid, "message": "我觉得活着真没意思"})
+    check("危机红线绝望型", status == 200 and body.get("risk_flag") and body.get("crisis_type") == "hopeless")
+
+    # 危机幂等：已有 open 干预时不重复建
+    before_iv = db.query(Intervention).filter(Intervention.student_id == sid,
+                                              Intervention.status.in_(["open", "in_progress"])).count()
+    status, body = post_json("/api/ai/companion/chat", {"student_id": sid, "message": "我想结束生命"})
+    after_iv = db.query(Intervention).filter(Intervention.student_id == sid,
+                                             Intervention.status.in_(["open", "in_progress"])).count()
+    check("危机干预幂等不重复建", status == 200 and after_iv == before_iv, f"before={before_iv}, after={after_iv}")
+
+    # 树洞 SSE 流式
+    status, text = sse_post_json("/api/ai/companion/chat/stream", {"student_id": sid, "message": "最近压力好大"})
+    counts = sse_event_counts(text)
+    check("树洞流式对话成功", status == 200 and counts.get("done", 0) == 1 and counts.get("token", 0) > 0,
+          f"st={status}, events={counts}")
+    status, body = get(f"/api/ai/companion/history?student_id={sid}&limit=10")
+    check("树洞流式落库", status == 200 and any(a.get("role") == "assistant" for a in body))
+    status, text = sse_post_json("/api/ai/companion/chat/stream", {"student_id": sid, "message": "我不想活了"})
+    counts = sse_event_counts(text)
+    check("树洞流式危机直接 done", status == 200 and counts.get("done", 0) == 1 and "token" not in counts,
+          f"events={counts}")
+
     set_auth(teacher_token)
+    status, body = get("/api/ai/companion/alerts?limit=10")
+    check("教师树洞危机通报", status == 200 and isinstance(body, list)
+          and any(a.get("student_id") == sid for a in body), f"st={status}")
     status, body = get("/api/ai/warning-board?class_name=初一1班")
     check("教师预警看板（班级）", status == 200 and isinstance(body, list))
     status, body = get("/api/ai/interventions?student_id=999999")
@@ -990,6 +1066,26 @@ def main():
     check("教师问数掌握率", status == 200 and body.get("answer"))
     status, body = get("/api/ai/ask?q=初一1班多少人")
     check("教师问数人数", status == 200 and "初一1班" in body.get("answer", ""))
+
+    # 教师问数越权范围：问本班之外的班级 → 回落本班，且不会复述越权班级名
+    status, body = get("/api/ai/ask?q=初二3班多少人")
+    check("教师问数越权回落本班", status == 200 and "初二3班" not in body.get("answer", ""),
+          f"ans={body.get('answer','')[:40]}")
+    status, body = get("/api/ai/ask?q=初二年级数学平均分")
+    check("教师问数年级维度回落本班", status == 200 and body.get("class_name") == "初一1班")
+
+    # 教师问数 SSE 流式
+    status, text = sse_get("/api/ai/ask/stream?q=初一1班数学掌握率")
+    counts = sse_event_counts(text)
+    check("教师问数流式成功", status == 200 and counts.get("done", 0) == 1 and counts.get("token", 0) > 0,
+          f"st={status}, events={counts}")
+    check("问数流式含阶段事件", counts.get("stage", 0) >= 2,
+          f"events={counts}")
+    status, text = sse_get("/api/ai/ask/stream?q=你好")
+    counts = sse_event_counts(text)
+    check("问数流式闲聊直接 done", status == 200 and counts.get("done", 0) == 1, f"events={counts}")
+    status, text = sse_get("/api/ai/ask/stream?q=hello")
+    check("问数流式问候", status == 200 and counts.get("done", 0) == 1, f"events={counts}")
     status, body = get(f"/api/ai/learning-report?scope=class&class_name=初一1班")
     check("教师班级学情报告", status == 200 and body.get("teaching_suggestions"))
     status, body = get(f"/api/ai/learning-report?scope=grade")
@@ -1039,6 +1135,35 @@ def main():
     set_auth(student_token)
     status, body = get("/api/ai/warning-board")
     check("学生访问预警看板 403", status == 403)
+    status, body = get("/api/ai/companion/alerts")
+    check("学生访问危机通报 403", status == 403)
+
+    # 危机通报范围隔离：教师只看本班，组长只看本年级，管理员看全校
+    # sid 在初一1班（教师 scope=初一1班），cross-class 数据不存在时用成员隔离验证
+    set_auth(teacher2_token)
+    status, body = get("/api/ai/companion/alerts?limit=50")
+    check("跨班教师危机通报不含外班", status == 200 and not any(a.get("student_id") == sid for a in body),
+          f"st={status}, got={len(body)}")
+
+    # 年级组长只看本年级
+    set_auth(leader_token)
+    status, body = get("/api/ai/companion/alerts?limit=50")
+    check("年级组长危机通报仅本年级", status == 200
+          and all(a.get("grade") == "初一" for a in body)
+          and any(a.get("student_id") == sid for a in body),
+          f"st={status}, got={len(body)}")
+
+    # 管理员看全校（至少覆盖组长可见范围）
+    set_auth(admin_token)
+    status, body = get("/api/ai/companion/alerts?limit=50")
+    leader_body, _ = None, None
+    set_auth(leader_token)
+    _, leader_body = get("/api/ai/companion/alerts?limit=50")
+    set_auth(admin_token)
+    check("管理员危机通报全校", status == 200
+          and len(body) >= len(leader_body)
+          and any(a.get("student_id") == sid for a in body),
+          f"st={status}, got={len(body)}, leader={len(leader_body)}")
 
     print("== 已移除的死代码接口 ==")
     status, body = get("/api/student/report?student_id=1")

@@ -85,7 +85,7 @@ def load_quality(db, student_ids):
         return defaultdict(list)
     acc = defaultdict(list)
     for r in db.execute(
-        select(QualityScore.student_id, QualityScore.subject, QualityScore.semester,
+        select(QualityScore.id, QualityScore.student_id, QualityScore.subject, QualityScore.semester,
                QualityScore.dimension, QualityScore.score, QualityScore.grade)
         .where(QualityScore.student_id.in_(student_ids))
     ):

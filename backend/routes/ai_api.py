@@ -5,16 +5,32 @@ import json
 from datetime import datetime, date
 
 from fastapi import APIRouter, Depends, Query, Path, HTTPException, Body
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from backend.models import get_db, Student, Score, ExamPlan, Intervention, CompanionChat, LearningPlan
 from backend.routes.auth import get_current_user, can_access_student, can_access_class, user_scope
 from backend.ai_modules import (
-    learning_report, narrative, talent, emotion_companion, intervention,
-    learning_path, paper_analysis, nl_query,
+    learning_report, narrative, talent, emotion_companion, emotion_companion_llm,
+    intervention, learning_path, paper_analysis, nl_query,
 )
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
+
+
+def _sse(event_type: str, payload: dict):
+    """把事件封装为 SSE 文本帧。"""
+    data = json.dumps(payload, ensure_ascii=False)
+    return f"event: {event_type}\ndata: {data}\n\n"
+
+
+def _event_loop(generator):
+    """把 (event_type, payload) 迭代器转为 SSE 字节流。"""
+    try:
+        for event_type, payload in generator:
+            yield _sse(event_type, payload).encode("utf-8")
+    except Exception:  # noqa: BLE001
+        yield _sse("error", {"type": "error", "message": "处理中断，请稍后再试。"}).encode("utf-8")
 
 
 def _require_staff(user):
@@ -96,6 +112,8 @@ def get_learning_report(scope: str = Query(...), student_id: int = Query(None, g
         g = grade or (user.grade if user.role == "grade_leader" else None)
         if not g:
             raise HTTPException(400, "grade is required")
+        if user.role == "teacher":
+            raise HTTPException(403, "教师仅可查看本班级学情报告")
         if user.role == "grade_leader" and g != user.grade:
             raise HTTPException(403, "年级组长仅可查看本年级")
         return learning_report.grade_report(db, g)
@@ -146,6 +164,61 @@ def get_companion_history(student_id: int = Query(..., gt=0), limit: int = Query
     } for r in reversed(rows)]
 
 
+@router.get("/companion/alerts")
+def get_companion_alerts(limit: int = Query(20, ge=1, le=100),
+                         user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """树洞危机通报：返回范围内最近的危机消息（教师=本班，年级组长=本年级，管理员=全校）。"""
+    _require_staff(user)
+    q = db.query(CompanionChat, Student).join(Student, CompanionChat.student_id == Student.id) \
+        .filter(CompanionChat.risk_flag == 1, CompanionChat.role == "user")
+    if user.role == "teacher":
+        q = q.filter(Student.class_name == user.class_name)
+    elif user.role == "grade_leader":
+        q = q.filter(Student.grade == user.grade)
+    rows = q.order_by(CompanionChat.created_at.desc()).limit(limit).all()
+    return [{
+        "student_id": c.student_id,
+        "name": s.name,
+        "class_name": s.class_name,
+        "grade": s.grade,
+        "message": c.message,
+        "intent": c.intent,
+        "created_at": c.created_at.isoformat() if c.created_at else None,
+    } for c, s in rows]
+
+
+def _ensure_crisis_intervention(db, student_id, message, crisis_type):
+    """危机自动建干预（幂等）：同一学生已有 open/in_progress 的心理干预则跳过。"""
+    from datetime import datetime
+    exists = db.query(Intervention.id).filter(
+        Intervention.student_id == student_id,
+        Intervention.status.in_(["open", "in_progress"]),
+    ).first()
+    if exists:
+        return None
+    type_text = {"self_harm": "自伤/轻生风险", "harm_others": "伤人/过激风险", "hopeless": "强烈绝望感"}.get(
+        crisis_type, "心理危机信号")
+    rec = Intervention(
+        student_id=student_id,
+        category="心理",
+        level="red",
+        title="树洞危机提醒",
+        plan_text=f"学生在心理树洞表达危机信号（{type_text}）：「{message[:80]}」。"
+                  "请班主任/心理老师尽快一对一沟通，评估安全风险；如需介入，建议联系心理老师并持续跟踪，必要时联系家长。",
+        target="即时心理安全评估与陪伴",
+        milestones=json.dumps(
+            ["当日：班主任/心理老师面谈", "第1周：每日关注情绪打卡", "第2周：复评风险状态"],
+            ensure_ascii=False),
+        status="open",
+        created_by=None,
+        baseline_index=None,
+        follow_notes="[]",
+    )
+    db.add(rec)
+    db.flush()
+    return rec.id
+
+
 @router.post("/companion/chat")
 def companion_chat(payload: dict = Body(...), user=Depends(get_current_user),
                    db: Session = Depends(get_db)):
@@ -163,13 +236,58 @@ def companion_chat(payload: dict = Body(...), user=Depends(get_current_user),
     if not db.query(Student.id).filter(Student.id == student_id).first():
         raise HTTPException(404, "学生不存在")
 
-    result = emotion_companion.companion_reply(db, student_id, message)
+    result = emotion_companion_llm.companion_reply(db, student_id, message)
     db.add(CompanionChat(student_id=student_id, role="user", message=message,
                          intent=result["intent"], risk_flag=1 if result.get("risk_flag") else 0))
     db.add(CompanionChat(student_id=student_id, role="assistant", message=result["reply"],
                          intent=result["intent"], risk_flag=1 if result.get("risk_flag") else 0))
+    intervention_id = None
+    if result.get("risk_flag"):
+        intervention_id = _ensure_crisis_intervention(
+            db, student_id, message, result.get("crisis_type") or "hopeless")
+        result["intervention_id"] = intervention_id
     db.commit()
     return result
+
+
+@router.post("/companion/chat/stream")
+def companion_chat_stream(payload: dict = Body(...), user=Depends(get_current_user),
+                          db: Session = Depends(get_db)):
+    """树洞对话（SSE 流式）：仅限学生本人发起；分阶段推送并流式生成回复。"""
+    student_id = payload.get("student_id")
+    message = (payload.get("message") or "").strip()
+    if not user:
+        raise HTTPException(401, "未登录或会话已过期")
+    if user.role != "student" or user.student_id != student_id:
+        raise HTTPException(403, "树洞仅支持学生本人使用")
+    if not isinstance(student_id, int) or student_id <= 0:
+        raise HTTPException(400, "Invalid student_id")
+    if not message or len(message) > 500:
+        raise HTTPException(400, "message must be 1-500 chars")
+    if not db.query(Student.id).filter(Student.id == student_id).first():
+        raise HTTPException(404, "学生不存在")
+
+    def gen():
+        last_done = None
+        for event_type, payload in emotion_companion_llm.companion_reply_stream(db, student_id, message):
+            if event_type == "done":
+                last_done = payload
+            yield event_type, payload
+        # 落库（流结束统一写入，避免半途写入）
+        if last_done:
+            db.add(CompanionChat(student_id=student_id, role="user", message=message,
+                                 intent=last_done.get("intent"),
+                                 risk_flag=1 if last_done.get("risk_flag") else 0))
+            db.add(CompanionChat(student_id=student_id, role="assistant", message=last_done.get("reply"),
+                                 intent=last_done.get("intent"),
+                                 risk_flag=1 if last_done.get("risk_flag") else 0))
+            if last_done.get("risk_flag"):
+                iv = _ensure_crisis_intervention(
+                    db, student_id, message, last_done.get("crisis_type") or "hopeless")
+                last_done["intervention_id"] = iv
+            db.commit()
+
+    return StreamingResponse(_event_loop(gen()), media_type="text/event-stream")
 
 
 # ---------------------------------------------------------------- 预警干预闭环
@@ -185,6 +303,8 @@ def get_warning_board(class_name: str = Query(None), grade: str = Query(None),
         _check_class(user, db, class_name)
         q = q.filter(Student.class_name == class_name)
     elif grade:
+        if user.role == "teacher":
+            raise HTTPException(403, "教师仅可查看本班预警")
         if user.role == "grade_leader" and grade != user.grade:
             raise HTTPException(403, "年级组长仅可查看本年级")
         q = q.filter(Student.grade == grade)
@@ -427,3 +547,20 @@ def ask(user=Depends(get_current_user), db: Session = Depends(get_db), q: str = 
     _require_staff(user)
     result = nl_query.answer_query(db, user, q)
     return result
+
+
+@router.get("/ask/stream")
+def ask_stream(user=Depends(get_current_user), db: Session = Depends(get_db),
+               q: str = Query(..., min_length=1, max_length=200),
+               context: str = Query(None, max_length=500)):
+    """教师问数（SSE 流式）：分阶段（搜索资料→整合数据→生成回答）并流式输出答案。"""
+    _require_staff(user)
+    ctx = None
+    if context:
+        try:
+            ctx = json.loads(context)
+        except Exception:  # noqa: BLE001
+            ctx = None
+    return StreamingResponse(
+        _event_loop(nl_query.answer_query_stream(db, user, q, context=ctx)),
+        media_type="text/event-stream")

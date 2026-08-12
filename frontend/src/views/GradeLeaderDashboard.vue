@@ -8,6 +8,7 @@
         </el-select>
         <el-button class="btn-primary" :disabled="!jumpClass" @click="enterClass">进入班级面板</el-button>
         <el-button class="btn-secondary" :loading="loading" @click="load">刷新</el-button>
+        <el-button class="btn-primary" @click="router.push('/grade-leader/review')">教师审核</el-button>
       </div>
     </div>
 
@@ -94,44 +95,7 @@
         </div>
       </div>
 
-      <div class="glass-card chart-card">
-        <div class="card-header">
-          本年级教师审核
-          <span class="card-hint">仅显示本年级教师账号</span>
-        </div>
-        <div class="table-scroll" style="padding:8px 0 0">
-          <table class="user-grid">
-            <thead>
-              <tr>
-                <th>用户名</th>
-                <th>昵称</th>
-                <th>班级</th>
-                <th>注册时间</th>
-                <th>状态</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="u in users" :key="u.id">
-                <td>{{ u.username }}</td>
-                <td class="user-cell-dim">{{ u.name || '—' }}</td>
-                <td class="user-cell-dim">{{ u.class_name || '未分配' }}</td>
-                <td class="user-cell-dim">{{ formatTime(u.created_at) }}</td>
-                <td><span class="status-badge" :class="`status-${u.status}`">{{ statusText(u.status) }}</span></td>
-                <td>
-                  <template v-if="u.status === 'pending'">
-                    <el-button size="small" class="btn-primary" style="margin-right:6px" @click="approve(u)">通过</el-button>
-                    <el-button size="small" class="btn-secondary" @click="reject(u)">驳回</el-button>
-                  </template>
-                  <span v-else class="user-cell-dim">—</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <div v-if="!users.length" class="no-data">暂无教师账号</div>
-        </div>
       </div>
-    </div>
     </transition>
 
     <PageSkeleton v-if="!overview && !error" :kpis="3" :charts="2" :table="true" />
@@ -145,7 +109,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import VChart from 'vue-echarts'
 import '../utils/echarts'
-import { getSchoolOverview, getGradeComparison, getSubjectMastery, getSchoolDistribution, getUsers, approveUser, rejectUser, getExamPlans, conductExam, requestErrorText } from '../utils/api'
+import { getSchoolOverview, getGradeComparison, getSubjectMastery, getSchoolDistribution, getExamPlans, conductExam, requestErrorText } from '../utils/api'
 import { getStoredUser } from '../utils/auth'
 import { themeKey, themeTooltip, themePalette, subjectColor } from '../utils/colors'
 import { ElMessage } from 'element-plus'
@@ -164,7 +128,6 @@ const jumpClass = ref('')
 const overview = ref(null)
 const classData = ref([])
 const mastery = ref({ grades: [], subjects: [], rows: [] })
-const users = ref([])
 const distribution = ref({ buckets: [], counts: [], total: 0 })
 const distMetric = ref('growth')
 const distSubject = ref('')
@@ -173,8 +136,6 @@ const loading = ref(false)
 const examPlans = ref([])
 const examLoading = ref(false)
 
-const STATUS_TEXT = { pending: '待审核', approved: '已通过', rejected: '已驳回' }
-const statusText = (s) => STATUS_TEXT[s] || s || '—'
 const EXAM_STATUS_TEXT = { planned: '待进行', conducted: '已进行', graded: '已批阅' }
 const examStatusText = (s) => EXAM_STATUS_TEXT[s] || s || '—'
 
@@ -190,14 +151,6 @@ const distColor = computed(() =>
     ? subjectColor(distSubject.value || (masterySubjects.value[0] || ''), masterySubjects.value)
     : ''
 )
-
-function formatTime(iso) {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '—'
-  const p = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
-}
 
 async function loadDist() {
   const subject = distMetric.value === 'score' ? distSubject.value : undefined
@@ -256,13 +209,12 @@ async function load() {
   error.value = ''
   loading.value = true
   try {
-    const [oRes, cRes, mRes, uRes] = await Promise.all([
-      getSchoolOverview(), getGradeComparison(), getSubjectMastery(), getUsers(),
+    const [oRes, cRes, mRes] = await Promise.all([
+      getSchoolOverview(), getGradeComparison(), getSubjectMastery(),
     ])
     overview.value = oRes.data
     classData.value = cRes.data
     mastery.value = mRes.data
-    users.value = uRes.data || []
     myClasses.value = classData.value.map((c) => c.class_name)
     if (myClasses.value.length && !jumpClass.value) jumpClass.value = myClasses.value[0]
     if (!distSubject.value && masterySubjects.value.length) distSubject.value = masterySubjects.value[0]
@@ -278,20 +230,6 @@ async function load() {
 
 function enterClass() {
   if (jumpClass.value) router.push({ path: '/teacher', query: { class: jumpClass.value } })
-}
-
-function approve(u) {
-  approveUser(u.id).then(() => {
-    ElMessage.success(`已通过 ${u.username} 的账号`)
-    load()
-  }).catch((e) => ElMessage.error(e?.response?.data?.detail || '操作失败'))
-}
-
-function reject(u) {
-  rejectUser(u.id).then(() => {
-    ElMessage.success(`已驳回 ${u.username} 的账号`)
-    load()
-  }).catch((e) => ElMessage.error(e?.response?.data?.detail || '操作失败'))
 }
 
 const classOption = computed(() => {

@@ -51,10 +51,22 @@ const routes = [
     meta: { title: '年级组长工作台', requiresAuth: true, roles: ['grade_leader'] },
   },
   {
+    path: '/grade-leader/review',
+    name: 'GradeLeaderReview',
+    component: () => import('../views/GradeLeaderReview.vue'),
+    meta: { title: '教师审核', requiresAuth: true, roles: ['grade_leader'] },
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('../views/AdminDashboard.vue'),
     meta: { title: '管理端', requiresAuth: true, roles: ['admin'] },
+  },
+  {
+    path: '/admin/review',
+    name: 'AdminReview',
+    component: () => import('../views/AdminReview.vue'),
+    meta: { title: '用户审核', requiresAuth: true, roles: ['admin'] },
   },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
@@ -84,6 +96,10 @@ router.beforeEach((to) => {
       return { path: ROLE_HOME[user.role] || '/', query: { reason: 'role' } }
     }
     return true
+  }
+
+  if (to.path === '/' && loggedIn && user && user.status === 'approved') {
+    return { path: ROLE_HOME[user.role] || '/', query: { auto: '1' } }
   }
 
   if ((to.path === '/login' || to.path === '/register') && loggedIn && user) {
