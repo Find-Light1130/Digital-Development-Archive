@@ -283,6 +283,6 @@ function printReport() {
 .full-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 .chart-card { padding: 6px var(--card-pad) 14px; }
 .card-hint { margin-left: 8px; font-size: 10px; font-weight: 400; color: var(--text-label); background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1px 8px; }
-.card-header { display: flex; align-items: center; font-weight: 600; font-size: 15px; color: var(--accent); padding: 10px 0 4px; }
+.card-header { display: flex; align-items: center; font-weight: 600; font-size: 15px; color: var(--accent); padding: 10px 0 12px; }
 @media (max-width: 768px) { .half-grid { grid-template-columns: 1fr; } }
 </style>

@@ -12,7 +12,7 @@
     </div>
 
     <template v-else-if="report">
-      <div class="ai-summary">{{ report.summary || report.paragraph }}</div>
+      <div class="ai-summary"><MdText :text="report.summary || report.paragraph" /></div>
 
       <!-- 学生级：科目掌握度矩阵 -->
       <div v-if="scope === 'student' && report.subjects" class="subj-block">
@@ -85,6 +85,7 @@
 import { ref, watch } from 'vue'
 import { getLearningReport } from '../utils/api'
 import EmptyState from './EmptyState.vue'
+import MdText from './MdText.vue'
 
 const props = defineProps({
   scope: { type: String, required: true }, // student / class / grade

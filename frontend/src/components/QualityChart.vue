@@ -348,7 +348,7 @@ watch([selectedSubject, selectedSemester], () => {
 .quality-table-title { font-size: 13px; font-weight: 600; color: var(--accent); padding: 10px 14px 6px; border-bottom: 1px solid var(--glass-border); }
 .table-scroll { overflow-x: auto; flex: 1; padding: 0 4px 8px 0; scrollbar-width: thin; scrollbar-color: var(--text-label) transparent; }
 .quality-grid { border-collapse: collapse; font-size: 11px; white-space: nowrap; table-layout: fixed; }
-.quality-grid th { height: 38px; padding: 0 4px; text-align: center; color: var(--text-secondary); font-weight: 500; }
+.quality-grid th { height: 38px; padding: 0 4px; text-align: center; color: var(--text-secondary); font-weight: 500; border-bottom: 1px solid var(--glass-border); }
 .quality-grid .q-corner { text-align: left; padding-left: 14px; position: sticky; left: 0; background: var(--glass-bg-solid); z-index: 2; width: 76px; min-width: 76px; color: var(--text-secondary); }
 .quality-grid .q-head { width: 76px; min-width: 76px; }
 .quality-grid td { height: 38px; padding: 0 4px; text-align: center; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary); transition: background 0.15s; }

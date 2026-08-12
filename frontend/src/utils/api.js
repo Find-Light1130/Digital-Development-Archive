@@ -98,10 +98,6 @@ export function getStudentSummary(studentId) {
   return api.get('/student/summary', { params: { student_id: studentId } })
 }
 
-export function getStudentRank(studentId) {
-  return api.get('/student/rank', { params: { student_id: studentId } })
-}
-
 export function getStudentQuality(studentId, semester) {
   const params = { student_id: studentId }
   if (semester) params.semester = semester

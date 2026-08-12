@@ -1,5 +1,5 @@
 """AI 问数全量数据服务：对 students/scores/quality_scores/attendance/emotions/
-activities/awards/exam_plans 等全表做聚合统计，供问数助手按意图生成答案。
+activities/awards/exam_plans 等全表做聚合统计，供智能AI助手按意图生成答案。
 
 统一基于 common.py 的批量加载与统计口径，避免各模块重复查询。
 """

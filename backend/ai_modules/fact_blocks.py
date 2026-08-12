@@ -69,28 +69,6 @@ def mastery_facts(db, students, subject=None):
     }
 
 
-def ranking_facts(db, students, subject=None):
-    ids = [s.id for s in students]
-    scores = load_scores(db, ids)
-    subject = subject or list(MAX_SCORES)[0]
-    vals = []
-    for sid, rows in scores.items():
-        m = subject_mastery(rows).get(subject)
-        if m is not None:
-            vals.append((sid, m))
-    label = _scope_label(students[0].class_name if students else None)
-    if not vals:
-        return {"facts": f"{label}暂无{subject}成绩数据。", "data": []}
-    vals.sort(key=lambda kv: (-kv[1], kv[0]))
-    smap = load_students(db, ids)
-    top = vals[0]
-    names = "、".join(f"{smap[sid].name}（{v}%）" for sid, v in vals[:3])
-    return {
-        "facts": f"{label}的{subject}掌握率排名：第一{top[0] and smap[top[0]].name}（{top[1]}%），前三：{names}。",
-        "data": [{"student_id": sid, "name": smap[sid].name, "value": v} for sid, v in vals[:10]],
-    }
-
-
 def declining_facts(db, students, subject=None):
     from backend.ai_modules.common import subject_trends
     ids = [s.id for s in students]
@@ -294,7 +272,6 @@ def list_facts(db, students):
 
 FACT_BUILDERS = {
     "mastery": lambda db, st, subject=None: _wrap_scope(mastery_facts(db, st, subject), st),
-    "ranking": lambda db, st, subject=None: _wrap_scope(ranking_facts(db, st, subject), st),
     "declining": lambda db, st, subject=None: _wrap_scope(declining_facts(db, st, subject), st),
     "warnings": lambda db, st, subject=None: _wrap_scope(warnings_facts(db, st), st),
     "extremes": lambda db, st, subject=None: _wrap_scope(extremes_facts(db, st, subject), st),

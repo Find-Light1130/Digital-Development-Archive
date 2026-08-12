@@ -681,6 +681,9 @@ body::after {
 .kpi-value { font-size: 32px; font-weight: 700; background: linear-gradient(135deg, var(--accent), #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
 .kpi-label { font-size: 12px; font-weight: 500; color: var(--text-label-light); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
 
+/* ===== 卡片标题栏（全局基础样式，子组件内 scoped 父样式不生效，需在此兜底） ===== */
+.card-header { display: flex; align-items: center; gap: 6px; padding: 10px 0 12px; font-size: 15px; font-weight: 600; color: var(--accent); }
+
 /* tabular-nums for stable numeric columns */
 .m-cell, .score-grid td, .el-table .cell, .kpi-card, .stat-value, .count-up { font-variant-numeric: tabular-nums; }
 .btn-primary { background: var(--btn-primary-bg) !important; border: none !important; border-radius: 10px !important; font-weight: 600 !important; transition: all 0.25s cubic-bezier(0.4,0,0.2,1) !important; box-shadow: 0 2px 12px var(--btn-primary-shadow) !important; color: #fff !important; }
@@ -742,15 +745,22 @@ body::after {
 .glass-table .el-table__header-wrapper th,
 .glass-table .el-table__header-wrapper tr:hover,
 .glass-table .el-table__header-wrapper th:hover {
-  background: transparent !important;
+  background: rgba(255,255,255,0.02) !important;
 }
-.glass-table .el-table__header th { color: var(--text-secondary); font-weight: 600; }
+[data-theme="light"] .glass-table .el-table__header-wrapper,
+[data-theme="light"] .glass-table .el-table__header-wrapper tr,
+[data-theme="light"] .glass-table .el-table__header-wrapper th,
+[data-theme="light"] .glass-table .el-table__header-wrapper tr:hover,
+[data-theme="light"] .glass-table .el-table__header-wrapper th:hover {
+  background: rgba(0,0,0,0.02) !important;
+}
+.glass-table .el-table__header th { color: var(--text-secondary); font-weight: 500; }
 .glass-table .el-table__body tr { background: rgba(255,255,255,0.02) !important; transition: all 0.2s; }
 [data-theme="light"] .glass-table .el-table__body tr { background: rgba(0,0,0,0.02) !important; }
 .glass-table .el-table__body tr.current-row,
 .glass-table .el-table__body tr.current-row > td { background: transparent !important; }
-.glass-table td { border-bottom-color: var(--glass-border) !important; color: var(--text-secondary) !important; transition: background-color 0.2s; }
-.glass-table th { border-bottom-color: var(--glass-border) !important; color: var(--text-secondary) !important; }
+.glass-table td { border-bottom-color: var(--glass-border) !important; color: var(--text-secondary) !important; font-weight: 500 !important; transition: background-color 0.2s; }
+.glass-table th { border-bottom-color: var(--glass-border) !important; color: var(--text-secondary) !important; font-weight: 500 !important; }
 .glass-table .el-table__empty-text { color: var(--text-label) !important; }
 .glass-table .el-table__body tr.el-table__row--striped { background: transparent !important; }
 

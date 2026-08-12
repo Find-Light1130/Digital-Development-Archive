@@ -2,9 +2,10 @@
   <div class="glass-card chart-card ask-card">
     <div class="card-header">
       <svg viewBox="0 0 24 24" width="16" height="16" style="margin-right:6px;flex-shrink:0">
-        <path d="M9 3h6M10 3v4M14 3v4M5 7h14l-1 12H6L5 7z" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 4h16v12H9l-5 4V4z" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+        <path d="M8 9h8M8 12h5" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      AI 问数助手
+      智能AI助手
       <span class="ask-hint">试试：初一1班数学掌握率 / 谁在掉队 / 红色预警</span>
     </div>
 
@@ -22,7 +23,7 @@
           <span class="spinner"></span>{{ r.stage }}
         </div>
         <div v-if="r.answer !== undefined" class="a-bubble" :class="{ error: r.error, streaming: r.streaming }">
-          {{ r.answer }}<span v-if="r.streaming" class="caret"></span>
+          <MdText :text="r.answer" /><span v-if="r.streaming" class="caret"></span>
         </div>
       </div>
     </div>
@@ -37,6 +38,7 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 import { askAIStream } from '../utils/api'
+import MdText from './MdText.vue'
 
 const draft = ref('')
 const records = ref([])
@@ -99,7 +101,7 @@ function scroll() {
 .quick-chip { border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-secondary); border-radius: 999px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
 .ask-record { display: flex; flex-direction: column; gap: 6px; }
 .q-bubble { align-self: flex-end; background: var(--accent); color: #fff; border-radius: 12px 12px 2px 12px; padding: 7px 12px; font-size: 13px; max-width: 80%; }
-.a-bubble { align-self: flex-start; background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-secondary); border-radius: 12px 12px 12px 2px; padding: 7px 12px; font-size: 13px; line-height: 1.7; max-width: 88%; white-space: pre-wrap; }
+.a-bubble { align-self: flex-start; background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-secondary); border-radius: 12px 12px 12px 2px; padding: 7px 12px; font-size: 13px; line-height: 1.7; max-width: 88%; }
 .a-bubble.error { color: var(--danger); }
 .stage-line { align-self: flex-start; display: flex; align-items: center; gap: 6px; color: var(--text-label); font-size: 12px; padding: 4px 10px; }
 .spinner { width: 12px; height: 12px; border: 2px solid var(--glass-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }

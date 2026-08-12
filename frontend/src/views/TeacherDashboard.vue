@@ -509,18 +509,6 @@
             <span class="stats-bucket-cnt">{{ cnt }} 人</span>
           </div>
         </div>
-        <div class="stats-ranks">
-          <div class="stats-ranks-title">班级排名（{{ examStats.count }} 人）</div>
-          <div class="stats-rank-grid">
-            <div v-for="r in examStats.ranking" :key="r.student_id"
-                 :class="['stats-rank-row', { 'top3': r.rank <= 3 }]">
-              <span class="stats-rank-idx">{{ r.rank }}</span>
-              <span class="stats-rank-name">{{ r.name }}</span>
-              <span class="stats-rank-score">{{ r.score }}</span>
-            </div>
-          </div>
-        </div>
-
         <div class="stats-ai-divider">AI 试卷分析</div>
         <PaperAnalysisPanel v-if="examStatsPlan" :plan-id="examStatsPlan.id" :class-name="className" />
       </template>
@@ -1462,7 +1450,7 @@ watch(() => overview.value, () => { trendHoveredColumn.value = '' })
 .table-header { font-weight: 600; font-size: 15px; color: var(--accent); padding: 14px 20px 8px; }
 .half-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .chart-card { padding: 6px var(--card-pad) 14px; }
-.card-header { display: flex; align-items: center; font-weight: 600; font-size: 15px; color: var(--accent); padding: 10px 0 4px; }
+.card-header { display: flex; align-items: center; font-weight: 600; font-size: 15px; color: var(--accent); padding: 10px 0 12px; }
 .card-hint { margin-left: 8px; font-size: 10px; font-weight: 400; color: var(--text-label); background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1px 8px; }
 .event-card { padding: 6px 20px 16px; }
 .event-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border-radius: 12px; background: var(--glass-bg); border: 1px solid var(--glass-border); }
@@ -1553,15 +1541,6 @@ watch(() => overview.value, () => { trendHoveredColumn.value = '' })
 .bucket-及格 { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
 .bucket-待提高 { background: linear-gradient(90deg, #f87171, #ef4444); }
 .stats-bucket-cnt { width: 42px; text-align: right; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
-.stats-ranks { border: 1px solid var(--glass-border); border-radius: 12px; }
-.stats-ranks-title { padding: 10px 14px 6px; font-size: 12px; font-weight: 600; color: var(--text-label); }
-.stats-rank-grid { max-height: 260px; overflow-y: auto; padding: 0 4px 8px; }
-.stats-rank-row { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 8px; font-size: 12px; }
-.stats-rank-row.top3 { background: rgba(var(--accent-rgb), 0.08); }
-.stats-rank-idx { width: 28px; color: var(--text-muted); text-align: center; font-weight: 600; }
-.stats-rank-row.top3 .stats-rank-idx { color: var(--accent); }
-.stats-rank-name { flex: 1; min-width: 0; color: var(--text-primary); }
-.stats-rank-score { color: var(--accent); font-weight: 600; }
 .stats-ai-divider { margin: 14px 0 10px; padding-top: 14px; border-top: 1px dashed var(--glass-border); font-size: 12px; font-weight: 600; color: var(--accent); }
 
 

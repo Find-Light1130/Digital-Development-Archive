@@ -15,7 +15,7 @@
         <div class="narr-index">成长指数 <b>{{ narrative.growth_index }}</b></div>
       </div>
       <div class="narr-body">
-        <p v-for="(p, i) in narrative.paragraphs" :key="i" class="narr-para">{{ p }}</p>
+        <div v-for="(p, i) in narrative.paragraphs" :key="i" class="narr-para"><MdText :text="p" /></div>
       </div>
       <div class="narr-tags">
         <span v-for="s in narrative.strengths" :key="s" class="narr-tag good">▲ {{ s }}</span>
@@ -32,6 +32,7 @@
 import { ref } from 'vue'
 import { getGrowthNarrative } from '../utils/api'
 import EmptyState from './EmptyState.vue'
+import MdText from './MdText.vue'
 
 const props = defineProps({
   studentId: { type: [Number, String], required: true },
@@ -67,6 +68,7 @@ defineExpose({ load })
 .narr-index b { color: var(--accent); font-size: 18px; margin-left: 4px; }
 .narr-body { border-left: 2px solid var(--accent); padding-left: 14px; margin: 4px 0 12px; }
 .narr-para { font-size: 14px; line-height: 2; color: var(--text-secondary); margin: 0 0 8px; text-indent: 2em; }
+.narr-para :deep(.md-body) { font-size: 14px; line-height: 2; color: var(--text-secondary); }
 .narr-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .narr-tag { font-size: 12px; padding: 3px 10px; border-radius: 999px; }
 .narr-tag.good { background: rgba(52, 211, 153, 0.12); color: var(--success); }

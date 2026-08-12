@@ -4,7 +4,7 @@
 1. 意图/槽位理解：llm_understanding.understand_ask（LLM 输出 JSON）；模型不可用时降级 TF-IDF。
 2. 权限收敛：llm_understanding.enforce_scope —— 模型提取/上下文继承的范围
    必须落在 user_scope 内，越权一律回落用户默认范围（修复越权漏洞）。
-3. 数据事实块：fact_blocks 按意图从精确数据层聚合（掌握率/排名/下滑/预警/考勤…）。
+3. 数据事实块：fact_blocks 按意图从精确数据层聚合（掌握率/下滑/预警/考勤…）。
 4. 回复生成：LLM 基于事实块生成自然语言答案（不再模板拼接）；不可用时回退事实文本。
 """
 
@@ -41,7 +41,6 @@ _CHAT_SYSTEM = (
 
 _HANDLERS = {
     "mastery": lambda db, st, subject=None: fact_blocks.mastery_facts(db, st, subject),
-    "ranking": lambda db, st, subject=None: fact_blocks.ranking_facts(db, st, subject),
     "declining": lambda db, st, subject=None: fact_blocks.declining_facts(db, st, subject),
     "warnings": lambda db, st, subject=None: fact_blocks.warnings_facts(db, st),
     "extremes": lambda db, st, subject=None: fact_blocks.extremes_facts(db, st, subject),
@@ -101,17 +100,17 @@ def _chat_fallback(q):
     """模型不可用时的闲聊兜底（保留原有文案）。"""
     from random import choice
     if "你好" in q or "hi" in q.lower() or "hello" in q.lower():
-        return ("你好，我是 AI 问数助手，可以帮你查班级/年级的成绩、考勤、素质、获奖、考试安排等。"
+        return ("你好，我是智能AI助手，可以帮你查班级/年级的成绩、考勤、素质、获奖、考试安排等。"
                 "试试：初一1班数学掌握率")
     if "谢谢" in q or "感谢" in q:
         return choice(["不客气，随时问我。", "能帮到你就好，还有想问的尽管说。"])
     if "再见" in q or "拜拜" in q or "晚安" in q:
         return choice(["再见，有需要再问我。", "好的，随时欢迎回来。"])
     if "帮助" in q or "help" in q.lower() or "能做什么" in q:
-        return ("我是学情数据 AI 助手，可以帮你查：成绩掌握率/排名/下滑/预警/最高最低/人数、考勤出勤率、"
+        return ("我是学情数据 AI 助手，可以帮你查：成绩掌握率/下滑/预警/最高最低/人数、考勤出勤率、"
                 "情绪风险、音体美信素质、活动时长、获奖情况、考试规划、成长指数、成绩趋势。"
                 "例如「初一1班数学掌握率」「本班谁在掉队」。")
-    return ("我是学情数据问数助手，专注回答班级/年级的成绩、考勤、素质、获奖、考试安排等校内数据问题；"
+    return ("我是学情数据智能AI助手，专注回答班级/年级的成绩、考勤、素质、获奖、考试安排等校内数据问题；"
             "课内知识或无关话题，请与老师或同学交流吧～")
 
 

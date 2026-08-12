@@ -58,68 +58,6 @@ def get_student_profile(student_id: int = Query(..., gt=0),
     }
 
 
-@router.get("/rank")
-def get_student_rank(student_id: int = Query(..., gt=0),
-                     user=Depends(get_current_user), db: Session = Depends(get_db)):
-    """本班位次：各学期总分排名 / 成长指数班级排名。"""
-    _check_access(user, student_id, db)
-    student = db.query(Student).filter(Student.id == student_id).first()
-    if not student:
-        raise HTTPException(404, "Student not found")
-
-    class_name = student.class_name
-    classmates = db.query(Student).filter(Student.class_name == class_name).all()
-    class_ids = [s.id for s in classmates]
-    if not class_ids:
-        return {"class_name": class_name, "semesters": [], "growth_rank": None}
-
-    rows = db.query(Score).filter(
-        Score.student_id.in_(class_ids),
-        Score.exam_type.in_(("月考", "期中", "期末")),
-    ).all()
-    per_student = {}
-    for r in rows:
-        key = r.semester
-        bucket = per_student.setdefault(key, {})
-        bucket.setdefault(r.student_id, 0.0)
-        bucket[r.student_id] += r.score
-
-    semesters = []
-    for sem, totals in per_student.items():
-        ranked = sorted(totals.items(), key=lambda kv: (-kv[1], kv[0]))
-        my_total = totals.get(student_id)
-        if my_total is None:
-            continue
-        my_rank = next(i + 1 for i, (sid, t) in enumerate(ranked) if sid == student_id)
-        semesters.append({
-            "semester": sem,
-            "total_score": round(my_total, 1),
-            "rank": my_rank,
-            "total_students": len(ranked),
-            "percentile": round((my_rank / len(ranked)) * 100, 1),
-        })
-    semesters.sort(key=lambda x: SEMESTER_ORDER.get(x["semester"], 0))
-
-    growth_rank = None
-    try:
-        from backend.ai_modules.analysis import batch_growth_profiles
-        profiles = batch_growth_profiles(class_ids, db, light=True)
-        ranked = sorted(profiles.items(), key=lambda kv: (-kv[1]["growth_index"], kv[0]))
-        for i, (sid, p) in enumerate(ranked):
-            if sid == student_id:
-                growth_rank = {
-                    "rank": i + 1,
-                    "total_students": len(ranked),
-                    "growth_index": round(p["growth_index"], 2),
-                    "percentile": round(((i + 1) / len(ranked)) * 100, 1),
-                }
-                break
-    except Exception:
-        growth_rank = None
-
-    return {"class_name": class_name, "semesters": semesters, "growth_rank": growth_rank}
-
-
 @router.get("/search")
 def search_students(keyword: str = Query(..., min_length=1, max_length=50),
                     user=Depends(get_current_user), db: Session = Depends(get_db)):

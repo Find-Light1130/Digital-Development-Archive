@@ -34,25 +34,30 @@
       </div>
 
       <div v-if="!rows.length" class="wb-empty">当前范围内没有{{ level === 'all' ? '高' : '' }}风险学生</div>
-      <div v-else class="wb-table">
-        <div v-for="r in rows" :key="r.student_id" class="wb-row">
-          <span class="wb-badge" :class="r.risk_level">{{ r.risk_level === 'red' ? '红' : '黄' }}</span>
-          <div class="wb-main">
-            <div class="wb-top">
-              <span class="wb-name" @click="openDetail(r.student_id)">{{ r.name }}</span>
-              <span class="wb-class">{{ r.class_name }}</span>
-              <span class="wb-score">风险 {{ r.risk_score }}</span>
-              <div class="wb-actions">
-                <el-button size="small" @click="openIntervention(r)">干预</el-button>
-                <el-button size="small" type="primary" plain @click="openDetail(r.student_id)">详情</el-button>
+      <template v-else>
+        <div class="wb-table">
+          <div v-for="r in visibleRows" :key="r.student_id" class="wb-row">
+            <span class="wb-badge" :class="r.risk_level">{{ r.risk_level === 'red' ? '红' : '黄' }}</span>
+            <div class="wb-main">
+              <div class="wb-top">
+                <span class="wb-name" @click="openDetail(r.student_id)">{{ r.name }}</span>
+                <span class="wb-class">{{ r.class_name }}</span>
+                <span class="wb-score">风险 {{ r.risk_score }}</span>
+                <div class="wb-actions">
+                  <el-button size="small" @click="openIntervention(r)">干预</el-button>
+                  <el-button size="small" type="primary" plain @click="openDetail(r.student_id)">详情</el-button>
+                </div>
               </div>
-            </div>
-            <div class="wb-warnings">
-              <span v-for="(w, i) in r.warnings.slice(0, 3)" :key="i" class="warn-chip">{{ w.text }}</span>
+              <div class="wb-warnings">
+                <span v-for="(w, i) in r.warnings.slice(0, 3)" :key="i" class="warn-chip">{{ w.text }}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+        <button v-if="filtered.length > 3" class="wb-toggle" @click="collapsedRows = !collapsedRows">
+          {{ collapsedRows ? `展开全部 ${filtered.length} 人` : '收起' }}
+        </button>
+      </template>
     </template>
 
     <el-dialog v-model="ivOpen" :title="'干预工作台 · ' + (curStudent?.name || '')" width="680px" append-to-body>
@@ -97,6 +102,13 @@ const filtered = computed(() => {
   return rows.value.filter((r) => r.risk_level === level.value)
 })
 
+const collapsedRows = ref(false)
+
+const visibleRows = computed(() => {
+  if (!collapsedRows.value || filtered.value.length <= 3) return filtered.value
+  return filtered.value.slice(0, 3)
+})
+
 async function load() {
   loading.value = true
   try {
@@ -115,6 +127,7 @@ async function load() {
 }
 
 watch(() => [props.className, props.grade], load, { immediate: true })
+watch(level, () => { collapsedRows.value = false })
 
 function openIntervention(r) {
   curStudent.value = r
@@ -164,5 +177,7 @@ function fmtTime(t) {
 .wb-actions { margin-left: auto; display: flex; gap: 6px; }
 .wb-warnings { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .warn-chip { font-size: 11px; color: var(--text-muted); background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 999px; padding: 2px 8px; }
+.wb-toggle { margin-top: 6px; width: 100%; padding: 6px 0; text-align: center; font-size: 12px; color: var(--accent); background: var(--glass-bg); border: 1px dashed var(--glass-border); border-radius: 8px; cursor: pointer; }
+.wb-toggle:hover { border-color: var(--accent); }
 @media (max-width: 720px) { .wb-top { flex-wrap: wrap; } .wb-actions { margin-left: 0; } }
 </style>

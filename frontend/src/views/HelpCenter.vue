@@ -261,7 +261,7 @@ const errors = [
 .table-scroll { overflow-x: auto; }
 .acct-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .acct-table th {
-  text-align: left; padding: 10px 12px; color: var(--text-label); font-weight: 600;
+  text-align: left; padding: 10px 12px; color: var(--text-secondary); font-weight: 500;
   border-bottom: 1px solid var(--glass-border); white-space: nowrap;
 }
 .acct-table td { padding: 10px 12px; color: var(--text-secondary); border-bottom: 1px solid rgba(128,128,128,0.08); }

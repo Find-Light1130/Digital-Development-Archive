@@ -540,7 +540,7 @@ const classOption = computed(() => {
 .kpi-card { padding: 20px; text-align: center; }
 .half-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .chart-card { padding: 6px var(--card-pad) 14px; }
-.card-header { display: flex; align-items: center; font-weight: 600; font-size: 15px; color: var(--accent); padding: 10px 0 4px; flex-wrap: wrap; gap: 6px; }
+.card-header { display: flex; align-items: center; font-weight: 600; font-size: 15px; color: var(--accent); padding: 10px 0 12px; flex-wrap: wrap; gap: 6px; }
 .table-header { font-weight: 600; font-size: 15px; color: var(--accent); padding: 14px 20px 8px; }
 .glass-card .el-table__body tr:last-child td { border-bottom: none !important; }
 
@@ -561,8 +561,8 @@ const classOption = computed(() => {
 .table-scroll { overflow-x: auto; }
 .user-grid { width: 100%; border-collapse: collapse; font-size: 13px; }
 .user-grid th {
-  text-align: left; font-size: 11px; font-weight: 600; color: var(--text-label);
-  padding: 6px 12px; border-bottom: 1px solid var(--glass-border);
+  text-align: left; font-size: 13px; font-weight: 500; color: var(--text-primary);
+  padding: 10px 12px; border-bottom: 1px solid var(--glass-border);
 }
 .user-grid td { padding: 10px 12px; color: var(--text-primary); border-bottom: 1px solid var(--glass-border); vertical-align: middle; }
 .user-grid tr:last-child td { border-bottom: none; }

@@ -22,9 +22,9 @@ CONFIDENCE_THRESHOLD = 0.21
 _MIN_GRAMS = 2
 _MAX_GRAMS = 3
 
-# 问数（教师/管理问数助手）可用意图集合
+# 问数（教师/管理智能AI助手）可用意图集合
 ASK_INTENTS = {
-    "mastery", "ranking", "declining", "warnings", "extremes", "count",
+    "mastery", "declining", "warnings", "extremes", "count",
     "attendance", "emotion", "quality", "activity", "award", "exam_plan",
     "growth_index", "trend", "list", "help", "chat", "greet", "thanks", "bye",
 }

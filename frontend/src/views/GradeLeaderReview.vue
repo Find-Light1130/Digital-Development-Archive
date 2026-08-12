@@ -113,11 +113,11 @@ onMounted(() => {
   padding: 2px 10px; border-radius: 10px;
 }
 .chart-card { padding: 6px var(--card-pad) 14px; }
-.card-header { display: flex; align-items: center; font-weight: 600; font-size: 15px; color: var(--accent); padding: 10px 0 4px; flex-wrap: wrap; gap: 6px; }
+.card-header { display: flex; align-items: center; font-weight: 600; font-size: 15px; color: var(--accent); padding: 10px 0 12px; flex-wrap: wrap; gap: 6px; }
 .card-hint { margin-left: 8px; font-size: 11px; color: var(--text-label); font-weight: 400; }
 .table-scroll { overflow-x: auto; }
 .user-grid { width: 100%; border-collapse: collapse; font-size: 13px; }
-.user-grid th { text-align: left; font-size: 11px; font-weight: 600; color: var(--text-label); padding: 6px 12px; border-bottom: 1px solid var(--glass-border); }
+.user-grid th { text-align: left; font-size: 13px; font-weight: 500; color: var(--text-primary); padding: 10px 12px; border-bottom: 1px solid var(--glass-border); }
 .user-grid td { padding: 10px 12px; color: var(--text-primary); border-bottom: 1px solid var(--glass-border); vertical-align: middle; }
 .user-grid tr:last-child td { border-bottom: none; }
 .user-cell-dim { color: var(--text-muted); }

@@ -3,36 +3,42 @@
     <template v-for="section in sections" :key="section.grade">
       <div class="tl-period" v-reveal="{ direction: 'left', delay: 0 }">
         <span class="tl-period-line"></span>
-        <span class="tl-period-badge">
+        <span class="tl-period-badge" style="cursor:pointer" @click="toggleSection(section.grade)">
           <span class="tl-dot-mark"></span>
           {{ section.title }}
+          <span class="tl-arrow">{{ collapsed[section.grade] ? '▾' : '▸' }}</span>
           <span class="tl-dot-mark"></span>
         </span>
         <span class="tl-period-line"></span>
       </div>
-      <div v-for="(item, i) in section.items" :key="item.key" class="tl-item" v-reveal="{ direction: 'up', delay: Math.min(i, 6) * 60 }">
-        <div class="tl-rail">
-          <span class="tl-dot" :style="{ background: item.color, boxShadow: `0 0 0 4px ${item.color}22` }"></span>
-          <span v-if="i < section.items.length - 1" class="tl-line"></span>
-        </div>
-        <div class="tl-card glass-card" :class="`tl-${item.type}`">
-          <div class="tl-head">
-            <span class="tl-badge" :style="{ color: item.color, borderColor: item.color + '66', background: item.color + '14' }">{{ item.badge }}</span>
-            <span class="tl-date">{{ item.dateLabel }}</span>
+      <template v-if="!collapsed[section.grade]">
+        <div v-for="(item, i) in visibleItems(section)" :key="item.key" class="tl-item" v-reveal="{ direction: 'up', delay: Math.min(i, 6) * 60 }">
+          <div class="tl-rail">
+            <span class="tl-dot" :style="{ background: item.color, boxShadow: `0 0 0 4px ${item.color}22` }"></span>
+            <span v-if="i < visibleItems(section).length - 1" class="tl-line"></span>
           </div>
-          <div class="tl-title" :style="{ color: item.color }">{{ item.title }}</div>
-          <div class="tl-detail">{{ item.detail }}</div>
-          <div class="tl-subs" v-if="item.subs && item.subs.length">
-            <span v-for="(s, j) in item.subs" :key="j" class="tl-sub">{{ s }}</span>
+          <div class="tl-card glass-card" :class="`tl-${item.type}`">
+            <div class="tl-head">
+              <span class="tl-badge" :style="{ color: item.color, borderColor: item.color + '66', background: item.color + '14' }">{{ item.badge }}</span>
+              <span class="tl-date">{{ item.dateLabel }}</span>
+            </div>
+            <div class="tl-title" :style="{ color: item.color }">{{ item.title }}</div>
+            <div class="tl-detail">{{ item.detail }}</div>
+            <div class="tl-subs" v-if="item.subs && item.subs.length">
+              <span v-for="(s, j) in item.subs" :key="j" class="tl-sub">{{ s }}</span>
+            </div>
           </div>
         </div>
-      </div>
+        <button v-if="section.items.length > 3" class="tl-toggle" @click="expandSection(section.grade)">
+          展开全部 {{ section.items.length }} 条
+        </button>
+      </template>
     </template>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { dateSemester, semesterIndex } from '../utils/semesters'
 
 const props = defineProps({
@@ -178,6 +184,22 @@ const sections = computed(() => {
       return sec
     })
 })
+
+const collapsed = reactive({})
+const expanded = reactive({})
+
+function toggleSection(grade) {
+  collapsed[grade] = !collapsed[grade]
+}
+
+function expandSection(grade) {
+  expanded[grade] = true
+}
+
+function visibleItems(section) {
+  if (expanded[section.grade]) return section.items
+  return section.items.slice(0, 3)
+}
 </script>
 
 <style scoped>
@@ -193,6 +215,9 @@ const sections = computed(() => {
   box-shadow: 0 2px 10px rgba(var(--accent-rgb), 0.12);
 }
 .tl-dot-mark { width: 6px; height: 6px; border-radius: 1px; background: var(--accent); transform: rotate(45deg); opacity: 0.55; }
+.tl-arrow { font-size: 11px; color: var(--accent); opacity: 0.8; }
+.tl-toggle { margin: 10px 0 2px 32px; padding: 6px 14px; font-size: 12px; color: var(--accent); background: var(--glass-bg); border: 1px dashed var(--glass-border); border-radius: 8px; cursor: pointer; }
+.tl-toggle:hover { border-color: var(--accent); }
 .tl-period:first-child { margin-top: 6px; }
 .tl-item { display: flex; gap: 14px; position: relative; }
 .tl-rail { display: flex; flex-direction: column; align-items: center; width: 18px; flex-shrink: 0; }

@@ -7,7 +7,7 @@
       AI 个性化学习路径
       <div class="lp-actions">
         <span v-if="plan" class="lp-week">{{ plan.week_label }}</span>
-        <el-button v-if="canGenerate" size="small" :loading="generating" @click="generate">重新生成</el-button>
+        <el-button v-if="canGenerate" size="small" class="btn-primary" :loading="generating" @click="generate">重新生成</el-button>
       </div>
     </div>
 
@@ -94,7 +94,13 @@ async function generate() {
 }
 
 async function toggle(it) {
-  if (!plan.value?.id) return
+  if (!plan.value?.id) {
+    await generate()
+    if (!plan.value?.id) return
+    const fresh = (plan.value.items || []).find((x) => x.key === it.key)
+    if (!fresh) return
+    it = fresh
+  }
   const next = !it.done
   it.done = next
   try {

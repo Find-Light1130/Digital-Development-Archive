@@ -1,7 +1,7 @@
 """意图训练语料：教师问数 + 心理树洞的中文教育领域例句。
 
 每个样本为 (intent, text)。文本为自编语料，覆盖：
-- 问数意图：mastery/ranking/declining/warnings/extremes/count/attendance/emotion/
+- 问数意图：mastery/declining/warnings/extremes/count/attendance/emotion/
   quality/activity/award/exam_plan/growth_index/trend/list/help/chat/greet/thanks/bye
 - 树洞意图：crisis/greet/sad/anxious/angry/tired/study/friend/family/advice/thanks/bye
 
@@ -86,39 +86,6 @@ INTENT_EXAMPLES = [
     ("mastery", "班里掌握率"),
     ("mastery", "总体掌握程度"),
     ("mastery", "整体掌握率"),
-
-    # ---------------------------------------------------------------- 排名
-    ("ranking", "初一1班数学第一名是谁"),
-    ("ranking", "本班数学排名第一"),
-    ("ranking", "谁数学最好"),
-    ("ranking", "全班排名情况"),
-    ("ranking", "初一1班成绩排名"),
-    ("ranking", "第一名是谁"),
-    ("ranking", "数学最厉害的学生"),
-    ("ranking", "成绩排名靠前的同学"),
-    ("ranking", "本班谁成绩最好"),
-    ("ranking", "班里排名第一的"),
-    ("ranking", "最好的学生是谁"),
-    ("ranking", "排名前十"),
-    ("ranking", "数学成绩排行榜"),
-    ("ranking", "谁的总分最高"),
-    ("ranking", "前三名是谁"),
-    ("ranking", "排名情况如何"),
-    ("ranking", "初一3班数学排名"),
-    ("ranking", "本班名次"),
-    ("ranking", "谁排第一"),
-    ("ranking", "成绩最好的同学"),
-    ("ranking", "排名第一的学生"),
-    ("ranking", "全班成绩排名前几"),
-    ("ranking", "谁在班里最优秀"),
-    ("ranking", "初二年级排名"),
-    ("ranking", "谁的总分最高"),
-    ("ranking", "本班名次"),
-    ("ranking", "谁排第一"),
-    ("ranking", "谁在班里最优秀"),
-    ("ranking", "谁分数最高"),
-    ("ranking", "班里谁最强"),
-    ("ranking", "成绩最好的"),
 
     # ---------------------------------------------------------------- 掉队 / 下滑
     ("declining", "初一1班谁在掉队"),

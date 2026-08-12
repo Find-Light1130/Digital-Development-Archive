@@ -165,42 +165,6 @@
       <div class="glass-card chart-card" v-reveal="{ delay: 60 }">
         <div class="card-header">
           <svg viewBox="0 0 24 24" width="16" height="16" style="margin-right:6px;flex-shrink:0">
-            <path d="M3 17l5-5 4 4 8-8" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M15 8h5v5" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          本班位次
-          <span class="card-hint">{{ rank.class_name }}</span>
-        </div>
-        <div v-if="rank.semesters.length || rank.growth_rank" class="rank-wrap">
-          <div class="rank-growth" v-if="rank.growth_rank">
-            <span class="rank-growth-label">成长指数</span>
-            <span class="rank-growth-value">第 {{ rank.growth_rank.rank }} / {{ rank.growth_rank.total_students }} 名</span>
-            <span class="rank-growth-sub">{{ rank.growth_rank.growth_index }} 分 · 超过 {{ 100 - rank.growth_rank.percentile }}% 同学</span>
-          </div>
-          <table v-if="rank.semesters.length" class="rank-table">
-            <thead><tr><th>学期</th><th>总分</th><th>名次</th><th>进步</th></tr></thead>
-            <tbody>
-              <tr v-for="(s, i) in rank.semesters" :key="s.semester">
-                <td>{{ s.semester }}</td>
-                <td>{{ s.total_score }}</td>
-                <td>{{ s.rank }} / {{ s.total_students }}</td>
-                <td>
-                  <span v-if="i > 0" :class="deltaClass(rank.semesters[i-1].rank - s.rank)">
-                    {{ rank.semesters[i-1].rank - s.rank > 0 ? '↑' : rank.semesters[i-1].rank - s.rank < 0 ? '↓' : '—' }} {{ Math.abs(rank.semesters[i-1].rank - s.rank) }}
-                  </span>
-                  <span v-else class="delta-0">—</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <div v-if="!rank.semesters.length && rank.growth_rank" class="no-data">暂无成绩排名</div>
-        </div>
-        <div v-else class="no-data">暂无位次数据</div>
-      </div>
-
-      <div class="glass-card chart-card" v-reveal="{ delay: 60 }">
-        <div class="card-header">
-          <svg viewBox="0 0 24 24" width="16" height="16" style="margin-right:6px;flex-shrink:0">
             <circle cx="12" cy="8" r="4" stroke="var(--accent)" stroke-width="1.5" fill="none"/>
             <path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
           </svg>
@@ -260,7 +224,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getStudentProfile, getStudentScores, getStudentEmotions, getStudentSemesters, getStudentSummary, getStudentQuality, submitEmotion, getStudentAttendance, getStudentRank, requestErrorText } from '../utils/api'
+import { getStudentProfile, getStudentScores, getStudentEmotions, getStudentSemesters, getStudentSummary, getStudentQuality, submitEmotion, getStudentAttendance, requestErrorText } from '../utils/api'
 import { getStoredUser } from '../utils/auth'
 import { semesterGroups } from '../utils/semesters'
 import RadarChart from '../components/RadarChart.vue'
@@ -291,7 +255,6 @@ const semesters = ref([])
 const summary = ref({ semesterStats: [], awards: [], activities: [] })
 const quality = ref([])
 const attendance = ref({ total: 0, absent: 0, rate: 0, monthly: [], absences: [] })
-const rank = ref({ class_name: '', semesters: [], growth_rank: null })
 const currentSemester = ref('')
 const reviewVisible = ref(false)
 const selectedExam = ref(null)
@@ -372,7 +335,6 @@ async function fetchStudent(id) {
   summary.value = { semesterStats: [], awards: [], activities: [] }
   quality.value = []
   attendance.value = { total: 0, absent: 0, rate: 0, monthly: [], absences: [] }
-  rank.value = { class_name: '', semesters: [], growth_rank: null }
   try {
     const [pRes, eRes, semRes, sumRes, qRes] = await Promise.all([
       getStudentProfile(id), getStudentEmotions(id), getStudentSemesters(id), getStudentSummary(id), getStudentQuality(id),
@@ -387,17 +349,15 @@ async function fetchStudent(id) {
       activities: sumRes.data?.activities || [],
     }
     quality.value = qRes.data
-    const [sRes, aRes, attRes, rankRes] = await Promise.all([
+    const [sRes, aRes, attRes] = await Promise.all([
       getStudentScores(id, semRes.data.length ? semRes.data[semRes.data.length - 1] : undefined),
       getStudentScores(id),
       getStudentAttendance(id),
-      getStudentRank(id),
     ])
     if (seq !== requestSeq) return
     scores.value = sRes.data
     allScores.value = aRes.data
     attendance.value = attRes.data || { total: 0, absent: 0, rate: 0, monthly: [], absences: [] }
-    rank.value = rankRes.data || { class_name: '', semesters: [], growth_rank: null }
     if (semRes.data.length) {
       currentSemester.value = semRes.data[semRes.data.length - 1]
     }
@@ -419,10 +379,6 @@ async function loadData() {
 function onSelectSuggestion(item) {
   if (!item) return
   fetchStudent(Number(item.student_id || myStudentId.value))
-}
-
-function deltaClass(delta) {
-  return delta > 0 ? 'delta-up' : delta < 0 ? 'delta-down' : 'delta-0'
 }
 
 async function onSemesterChange() {
@@ -498,7 +454,7 @@ onMounted(() => {
 .full-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 .chart-card { padding: 6px var(--card-pad) 14px; }
 .card-hint { margin-left: 8px; font-size: 10px; font-weight: 400; color: var(--text-label); background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1px 8px; }
-.card-header { display: flex; align-items: center; font-weight: 600; font-size: 15px; color: var(--accent); padding: 10px 0 4px; }
+.card-header { display: flex; align-items: center; font-weight: 600; font-size: 15px; color: var(--accent); padding: 10px 0 12px; }
 .mood-bar {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   padding: 10px 12px; margin: 2px 0 6px; border-radius: 12px;
@@ -539,23 +495,6 @@ onMounted(() => {
   font-size: 11px; padding: 1px 8px; border-radius: 8px; color: var(--danger);
   background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3);
 }
-.rank-wrap { padding: 6px 2px; }
-.rank-growth {
-  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
-  padding: 10px 14px; border-radius: 12px; margin-bottom: 10px;
-  background: var(--glass-bg); border: 1px solid var(--glass-border);
-}
-.rank-growth-label { font-size: 12px; color: var(--text-label); }
-.rank-growth-value { font-size: 18px; font-weight: 700; color: var(--accent); }
-.rank-growth-sub { font-size: 12px; color: var(--text-secondary); }
-.rank-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.rank-table th, .rank-table td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--glass-border); }
-.rank-table th { color: var(--text-label); font-weight: 600; font-size: 11px; }
-.rank-table td { color: var(--text-secondary); }
-.rank-table tr:last-child td { border-bottom: none; }
-.delta-up { color: var(--success); font-weight: 600; }
-.delta-down { color: var(--danger); font-weight: 600; }
-.delta-0 { color: var(--text-muted); }
 @media (max-width: 992px) { .cal-layout { flex-direction: column; } .cal-side { width: 100%; } }
 @media (max-width: 768px) {
   .mood-submit { margin-left: 0; }

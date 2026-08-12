@@ -23,8 +23,10 @@
       </div>
 
       <div v-for="m in messages" :key="m.id" class="msg" :class="m.role">
-        <div class="bubble">{{ m.message }}</div>
-        <div v-if="m.risk_flag" class="msg-flag">含风险提示</div>
+        <div class="bubble" :class="{ 'bubble-md': m.role === 'assistant' }">
+          <MdText v-if="m.role === 'assistant'" :text="m.message" />
+          <template v-else>{{ m.message }}</template>
+        </div>
       </div>
 
       <div v-if="typingStage" class="msg assistant">
@@ -33,7 +35,7 @@
         </div>
       </div>
       <div v-if="streaming" class="msg assistant">
-        <div class="bubble streaming">{{ streamText }}<span class="caret"></span></div>
+        <div class="bubble streaming bubble-md"><MdText :text="streamText" /><span class="caret"></span></div>
       </div>
     </div>
 
@@ -47,6 +49,7 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 import { getCompanionHistory, companionChatStream } from '../utils/api'
+import MdText from './MdText.vue'
 
 const props = defineProps({
   studentId: { type: [Number, String], required: true },
@@ -149,9 +152,9 @@ defineExpose({ load })
 .msg.user { justify-content: flex-end; }
 .msg.assistant { justify-content: flex-start; }
 .bubble { max-width: 78%; padding: 8px 12px; border-radius: 12px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
+.bubble-md { white-space: normal; }
 .msg.user .bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 2px; }
 .msg.assistant .bubble { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-secondary); border-bottom-left-radius: 2px; }
-.msg-flag { font-size: 10px; color: var(--danger); margin-top: 2px; }
 .typing-stage { display: flex; align-items: center; gap: 7px; color: var(--text-label); font-size: 12px; }
 .spinner { width: 12px; height: 12px; border: 2px solid var(--glass-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

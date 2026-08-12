@@ -18,7 +18,7 @@ from backend.routes.auth import user_scope
 
 # 问数意图（与 corpus 保持一致）
 ASK_LABELS = [
-    "mastery", "ranking", "declining", "warnings", "extremes", "count",
+    "mastery", "declining", "warnings", "extremes", "count",
     "attendance", "emotion", "quality", "activity", "award", "exam_plan",
     "growth_index", "trend", "list", "help", "chat", "greet", "thanks", "bye",
 ]
@@ -39,7 +39,7 @@ _ASK_PROMPT = """你是校园学情数据问答助手。用户会提问关于班
 {labels}
 
 字段说明：
-- "intent": 上述意图之一。问"平均分/掌握率/整体成绩"→mastery；问"谁第一/排名"→ranking；问"谁下滑/退步"→declining；问"预警/风险"→warnings；问"最高最低"→extremes；问"多少人"→count；问"考勤/出勤/缺勤"→attendance；问"情绪"→emotion；问"素质/音体美信"→quality；问"活动"→activity；问"获奖"→award；问"考试安排"→exam_plan；问"成长指数"→growth_index；问"趋势"→trend；问"名单/有哪些人"→list；打招呼→greet；道谢→thanks；告别→bye；问能做什么→help；其他闲聊→chat。
+- "intent": 上述意图之一。问"平均分/掌握率/整体成绩"→mastery；问"谁下滑/退步"→declining；问"预警/风险"→warnings；问"最高最低"→extremes；问"多少人"→count；问"考勤/出勤/缺勤"→attendance；问"情绪"→emotion；问"素质/音体美信"→quality；问"活动"→activity；问"获奖"→award；问"考试安排"→exam_plan；问"成长指数"→growth_index；问"趋势"→trend；问"名单/有哪些人"→list；打招呼→greet；道谢→thanks；告别→bye；问能做什么→help；其他闲聊→chat。
 - "class_name": 班级名（格式如"初一1班"，没提到班级则为 null）
 - "grade": 年级（初一/初二/初三，没提到则为 null）
 - "subject": 学科（语文/数学/英语/物理/化学/生物/历史/地理/道德与法治/音乐/体育/美术/信息技术，没提到则为 null）

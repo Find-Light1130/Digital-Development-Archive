@@ -424,7 +424,7 @@ watch(option, () => {
 .score-grid .corner { text-align: left; padding-left: 14px; position: sticky; left: 0; background: var(--glass-bg-solid); z-index: 2; color: var(--text-secondary); }
 .score-grid .col-corner { width: 76px; min-width: 76px; max-width: 76px; }
 .score-grid .col-data { width: 76px; min-width: 76px; max-width: 76px; }
-.score-grid .year-head { font-size: 10px; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid var(--glass-border); }
+.score-grid .year-head { font-size: 11px; color: var(--text-secondary); font-weight: 500; border-bottom: 2px solid var(--glass-border); }
 .score-grid td { border-bottom: 1px solid var(--glass-border); transition: background 0.15s; color: var(--text-secondary); }
 .score-grid .row-label { text-align: left; padding-left: 14px; font-weight: 600; position: sticky; left: 0; background: var(--glass-bg-solid); z-index: 2; }
 .score-grid td.highlight { background: rgba(var(--accent-rgb), 0.10) !important; }

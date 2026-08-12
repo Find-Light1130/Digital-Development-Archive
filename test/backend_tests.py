@@ -829,13 +829,7 @@ def main():
         db.delete(r)
     db.commit()
 
-    print("== 学生位次 / 班级获奖 ==")
-    set_auth(student_token)
-    st, body = get(f"/api/student/rank?student_id={sid}")
-    check("学生位次各学期排名", st == 200 and isinstance(body.get("semesters"), list)
-          and len(body.get("semesters", [])) > 0 and all("rank" in s and "total_students" in s for s in body["semesters"]))
-    check("学生位次成长排名", st == 200 and body.get("growth_rank") is not None
-          and body["growth_rank"]["rank"] >= 1 and "percentile" in body["growth_rank"])
+    print("== 班级获奖 ==")
     set_auth(teacher_token)
     st, body = get("/api/teacher/class/awards?class_name=初一1班")
     check("班级获奖列表", st == 200 and isinstance(body, list)
