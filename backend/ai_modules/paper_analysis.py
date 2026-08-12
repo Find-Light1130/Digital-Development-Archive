@@ -6,6 +6,7 @@
 
 from backend.models import Student, Score
 from backend.constants import MAX_SCORES
+from sqlalchemy import and_
 
 
 def _difficulty_label(p):
@@ -70,9 +71,10 @@ def paper_analysis(db, plan, class_name):
         else:
             buckets["待提高"] += 1
 
-    # 历史对比：本班该科历史均分
+    # 历史对比：本班该科历史均分（排除本次考试，避免自我污染）
     hist = db.query(Score).filter(
         Score.student_id.in_(ids), Score.subject == plan.subject, Score.score != None,
+        ~and_(Score.exam_type == plan.exam_type, Score.date == plan.exam_date),
     ).all()
     hist_avg = round(sum(s.score for s in hist) / len(hist), 1) if hist else None
     vs_history = None

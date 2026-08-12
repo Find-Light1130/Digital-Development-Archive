@@ -136,7 +136,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getStoredUser } from '../utils/auth'
@@ -227,7 +227,7 @@ async function load() {
   }
 }
 
-onMounted(load)
+watch(() => route.params.id, load, { immediate: true })
 
 async function onSemesterChange() {
   if (!currentSemester.value) return

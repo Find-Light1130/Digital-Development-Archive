@@ -258,6 +258,9 @@ export function requestErrorText(err, notFound = '未找到对应数据', fallba
   const status = err?.response?.status
   if (status === 404) return notFound
   if (status === 400) return '请求参数不合法，请检查输入'
+  if (status === 403) return '无权访问该数据'
+  if (status === 401) return '登录已过期，请重新登录'
+  if (status >= 500) return '服务器内部错误，请稍后再试'
   return fallback
 }
 
@@ -354,13 +357,13 @@ export function askAI(query) {
  * @param {object} handlers { onStage(payload), onToken(payload), onDone(payload), onError(payload) }
  * @returns {Promise} resolve 时携带 done payload
  */
-export function consumeSSE(url, handlers = {}, extraHeaders = {}) {
+export function consumeSSE(url, handlers = {}, extraHeaders = {}, signal = null) {
   return new Promise((resolve, reject) => {
     const token = getToken()
     const headers = { ...extraHeaders }
     if (token) headers.Authorization = `Bearer ${token}`
 
-    fetch(`${API_BASE}${url}`, { headers, method: 'GET' })
+    fetch(`${API_BASE}${url}`, { headers, method: 'GET', signal })
       .then((res) => {
         if (!res.ok) {
           return res.json().then((b) => reject(new Error(b?.detail || `HTTP ${res.status}`))).catch(() =>
@@ -407,16 +410,16 @@ export function consumeSSE(url, handlers = {}, extraHeaders = {}) {
 }
 
 /** SSE 流式问数 */
-export function askAIStream(query, handlers) {
-  return consumeSSE(`/ai/ask/stream?q=${encodeURIComponent(query)}`, handlers)
+export function askAIStream(query, handlers, signal = null) {
+  return consumeSSE(`/ai/ask/stream?q=${encodeURIComponent(query)}`, handlers, {}, signal)
 }
 
 /** SSE 流式树洞对话（POST） */
-export function companionChatStream(studentId, message, handlers) {
+export function companionChatStream(studentId, message, handlers, signal = null) {
   return new Promise((resolve, reject) => {
     const token = getToken()
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-    fetch(`${API_BASE}/ai/companion/chat/stream`, { method: 'POST', headers, body: JSON.stringify({ student_id: studentId, message }) })
+    fetch(`${API_BASE}/ai/companion/chat/stream`, { method: 'POST', headers, body: JSON.stringify({ student_id: studentId, message }), signal })
       .then((res) => {
         if (!res.ok) {
           return res.json().then((b) => reject(new Error(b?.detail || `HTTP ${res.status}`))).catch(() =>

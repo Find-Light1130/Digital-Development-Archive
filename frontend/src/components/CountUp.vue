@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   value: { type: Number, default: 0 },
@@ -47,4 +47,8 @@ watch(() => props.value, () => {
   animate()
 })
 onMounted(animate)
+onBeforeUnmount(() => {
+  if (rafId) cancelAnimationFrame(rafId)
+  rafId = null
+})
 </script>

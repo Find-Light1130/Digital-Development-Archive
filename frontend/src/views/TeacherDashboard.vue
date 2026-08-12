@@ -576,6 +576,8 @@ const qualityEntryDims = ref([])
 const qualityEntrySaving = ref(false)
 const qualityLoadSaving = ref(false)
 let requestSeq = 0
+let examPlansSeq = 0
+let awardsSeq = 0
 
 const COLLAPSE_KEY = 'tdCollapsed'
 const collapsed = ref(JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '{}'))
@@ -638,14 +640,17 @@ const awardsLoading = ref(false)
 
 async function loadClassAwards() {
   if (!className.value) return
+  const seq = ++awardsSeq
   awardsLoading.value = true
   try {
     const res = await getClassAwards(className.value)
+    if (seq !== awardsSeq) return
     classAwards.value = res.data || []
   } catch (e) {
+    if (seq !== awardsSeq) return
     classAwards.value = []
   } finally {
-    awardsLoading.value = false
+    if (seq === awardsSeq) awardsLoading.value = false
   }
 }
 
@@ -726,6 +731,8 @@ function updateAttendanceStats() {
     ? { class_name: className.value, students: rows, present, absent: rows.length - present }
     : null
 }
+
+watch(attendanceRows, updateAttendanceStats, { deep: true })
 
 function markAllPresent() {
   attendanceRows.value.forEach((r) => { r.present = true })
@@ -810,15 +817,18 @@ const gradingSaving = ref(false)
 
 async function loadExamPlans() {
   if (!className.value) return
+  const seq = ++examPlansSeq
   examPlansLoading.value = true
   try {
     const res = await getTeacherExamPlans(className.value)
+    if (seq !== examPlansSeq) return
     examPlans.value = res.data || []
   } catch (e) {
+    if (seq !== examPlansSeq) return
     ElMessage.error(e?.response?.data?.detail || '考试任务加载失败')
     examPlans.value = []
   } finally {
-    examPlansLoading.value = false
+    if (seq === examPlansSeq) examPlansLoading.value = false
   }
 }
 

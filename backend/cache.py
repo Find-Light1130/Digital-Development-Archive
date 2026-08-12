@@ -6,6 +6,7 @@ import time
 _cache = {}
 _cache_ttl = {}
 _cache_lock = threading.Lock()
+_indices_gen = 0
 
 
 def get(key):
@@ -23,6 +24,7 @@ def put(key, value):
 
 
 def invalidate(key):
+    global _indices_gen
     with _cache_lock:
         _cache.pop(key, None)
         _cache_ttl.pop(key, None)
@@ -30,3 +32,11 @@ def invalidate(key):
         for k in [k for k in _cache if k.startswith(prefix)]:
             _cache.pop(k, None)
             _cache_ttl.pop(k, None)
+        if key == "indices":
+            _indices_gen += 1
+
+
+def generation(key):
+    """返回某前缀缓存内容的代数，写操作 invalidate 时递增，用于防陈旧回填。"""
+    with _cache_lock:
+        return _indices_gen if key == "indices" else 0

@@ -31,7 +31,7 @@ def generate_plan(db, student_id, semester=None):
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         return None
-    scores = db.query(Score).filter(Score.student_id == student_id).all()
+    scores = db.query(Score).filter(Score.student_id == student_id).order_by(Score.date).all()
     mastery = subject_mastery(scores)
     if not mastery:
         return None

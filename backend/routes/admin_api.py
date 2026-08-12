@@ -161,6 +161,7 @@ def _get_indices(db, grade=None):
         cached = cache.get(key)
         if cached is not None:
             return cached
+        gen_before = cache.generation("indices")
         students = db.query(Student).all() if not grade else \
             db.query(Student).filter(Student.grade == grade).all()
         ids = [s.id for s in students]
@@ -177,7 +178,9 @@ def _get_indices(db, grade=None):
             }
             for sid, p in profiles.items()
         }
-        cache.put(key, result)
+        # 计算期间若有写操作已 invalidate，则丢弃本次陈旧结果，避免覆盖新数据
+        if cache.generation("indices") == gen_before:
+            cache.put(key, result)
         return result
 
 

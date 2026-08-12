@@ -47,7 +47,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onBeforeUnmount } from 'vue'
 import { getCompanionHistory, companionChatStream } from '../utils/api'
 import MdText from './MdText.vue'
 
@@ -65,6 +65,7 @@ const streamText = ref('')
 const loading = ref(false)
 const bodyRef = ref(null)
 const riskBanner = ref('')
+let abortController = null
 
 const quickQuestions = ['最近压力好大', '这次考试考砸了', '我好难过', '很焦虑睡不着', '和同学闹矛盾了']
 
@@ -88,9 +89,11 @@ async function send(text) {
   if (!content || props.readOnly || typing.value) return
   draft.value = ''
   typing.value = true
+  riskBanner.value = ''
   messages.value.push({ id: 'u-' + Date.now(), role: 'user', message: content, risk_flag: false })
 
   let done = null
+  abortController = new AbortController()
   try {
     await companionChatStream(props.studentId, content, {
       onStage: (p) => {
@@ -106,7 +109,7 @@ async function send(text) {
       onDone: (p) => {
         done = p
       },
-    })
+    }, abortController.signal)
     typingStage.value = ''
     streaming.value = false
     const reply = done?.reply || streamText.value
@@ -119,6 +122,7 @@ async function send(text) {
     }
     scrollToBottom()
   } catch (e) {
+    if (e?.name === 'AbortError') return
     typingStage.value = ''
     streaming.value = false
     messages.value.push({ id: 'e-' + Date.now(), role: 'assistant', message: '（消息发送失败，请稍后再试）', risk_flag: false })
@@ -128,6 +132,10 @@ async function send(text) {
     typing.value = false
   }
 }
+
+onBeforeUnmount(() => {
+  if (abortController) abortController.abort()
+})
 
 function scrollToBottom() {
   nextTick(() => {

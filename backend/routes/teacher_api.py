@@ -277,11 +277,13 @@ def get_class_overview(class_name: str = Query(...), semester: str = Query(None)
     total_index = 0
     needs_attention = []
     avg_aspects_sum = {}
+    profiled_count = 0
 
     for s in students:
         p = profiles.get(s.id)
         if not p:
             continue
+        profiled_count += 1
         total_index += p["growth_index"]
         if p["warnings"]:
             needs_attention.append({
@@ -292,8 +294,8 @@ def get_class_overview(class_name: str = Query(...), semester: str = Query(None)
         for k, v in p["aspects"].items():
             avg_aspects_sum[k] = avg_aspects_sum.get(k, 0) + v
 
-    avg_index = round(total_index / len(students), 1) if students else 0
-    avg_aspects = {k: round(v / len(students), 1) for k, v in avg_aspects_sum.items()} if students else {}
+    avg_index = round(total_index / profiled_count, 1) if profiled_count else 0
+    avg_aspects = {k: round(v / profiled_count, 1) for k, v in avg_aspects_sum.items()} if profiled_count else {}
 
     scores_q = db.query(Score).filter(Score.student_id.in_(ids)).all()
     subject_trends, subject_mastery = _build_trends(scores_q, semester)
@@ -523,10 +525,17 @@ def grade_exam_plan(plan_id: int = Path(...), payload: dict = Body(...),
     class_ids = {s.id for s in students}
     if not students or plan.grade != students[0].grade:
         raise HTTPException(400, "该班级不属于本场考试的年级")
-    if not all(isinstance(sc.get("student_id"), int) for sc in scores):
-        raise HTTPException(400, "student_id 必须为整数")
-    if not class_ids.issubset({sc.get("student_id") for sc in scores}) or \
-            {sc.get("student_id") for sc in scores} != class_ids:
+    seen_sids = set()
+    for i, it in enumerate(scores):
+        if not isinstance(it, dict):
+            raise HTTPException(400, f"scores[{i}] must be an object")
+        sid = it.get("student_id")
+        if not isinstance(sid, int):
+            raise HTTPException(400, "student_id 必须为整数")
+        if sid in seen_sids:
+            raise HTTPException(400, f"scores[{i}]: 学生重复，批阅名单不得含重复学生")
+        seen_sids.add(sid)
+    if seen_sids != class_ids:
         raise HTTPException(400, "批阅名单必须恰好覆盖本班全体学生")
 
     max_s = MAX_SCORES[plan.subject]
@@ -564,12 +573,11 @@ def grade_exam_plan(plan_id: int = Path(...), payload: dict = Body(...),
                 student_id=sid, subject=plan.subject, score=score, max_score=max_s,
                 exam_type=plan.exam_type, date=plan.exam_date, semester=plan.semester,
             ))
-    db.commit()
-    cache.invalidate("indices")
     plan.status = "graded"
     plan.graded_at = datetime.now()
     plan.graded_by = user.id
     db.commit()
+    cache.invalidate("indices")
     return {"status": "ok", "count": len(prepared)}
 
 

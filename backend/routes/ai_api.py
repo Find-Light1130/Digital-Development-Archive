@@ -75,14 +75,17 @@ def _dump_intervention(r: Intervention):
 
 
 def _dump_plan(p: LearningPlan):
+    items = json.loads(p.items) if p.items else []
     return {
         "id": p.id,
         "student_id": p.student_id,
         "semester": p.semester,
         "week_start": str(p.week_start),
+        "week_label": f"{p.week_start.month}月第{(p.week_start.day - 1) // 7 + 1}周",
         "title": p.title,
         "goals": json.loads(p.goals) if p.goals else [],
-        "items": json.loads(p.items) if p.items else [],
+        "items": items,
+        "mental_risk": any(it.get("subject") == "心理调节" for it in items),
         "status": p.status,
         "created_at": p.created_at.isoformat() if p.created_at else None,
     }
@@ -101,12 +104,18 @@ def get_learning_report(scope: str = Query(...), student_id: int = Query(None, g
         if not student_id:
             raise HTTPException(400, "student_id is required")
         _check_student(user, db, student_id)
-        return learning_report.student_report(db, student_id)
+        result = learning_report.student_report(db, student_id)
+        if not result:
+            raise HTTPException(404, "学生不存在")
+        return result
     if scope == "class":
         if not class_name:
             raise HTTPException(400, "class_name is required")
         _check_class(user, db, class_name)
-        return learning_report.class_report(db, class_name)
+        result = learning_report.class_report(db, class_name)
+        if not result:
+            raise HTTPException(404, "班级不存在")
+        return result
     if scope == "grade":
         _require_staff(user)
         g = grade or (user.grade if user.role == "grade_leader" else None)
@@ -116,7 +125,10 @@ def get_learning_report(scope: str = Query(...), student_id: int = Query(None, g
             raise HTTPException(403, "教师仅可查看本班级学情报告")
         if user.role == "grade_leader" and g != user.grade:
             raise HTTPException(403, "年级组长仅可查看本年级")
-        return learning_report.grade_report(db, g)
+        result = learning_report.grade_report(db, g)
+        if not result:
+            raise HTTPException(404, "年级不存在")
+        return result
     raise HTTPException(400, "scope must be student/class/grade")
 
 
@@ -155,6 +167,8 @@ def get_emotion_risk(student_id: int = Query(..., gt=0),
 def get_companion_history(student_id: int = Query(..., gt=0), limit: int = Query(50, ge=1, le=200),
                           user=Depends(get_current_user), db: Session = Depends(get_db)):
     _check_student(user, db, student_id)
+    if not db.query(Student.id).filter(Student.id == student_id).first():
+        raise HTTPException(404, "学生不存在")
     rows = db.query(CompanionChat).filter(CompanionChat.student_id == student_id) \
         .order_by(CompanionChat.created_at.desc()).limit(limit).all()
     return [{
@@ -192,6 +206,7 @@ def _ensure_crisis_intervention(db, student_id, message, crisis_type):
     from datetime import datetime
     exists = db.query(Intervention.id).filter(
         Intervention.student_id == student_id,
+        Intervention.category == "心理",
         Intervention.status.in_(["open", "in_progress"]),
     ).first()
     if exists:

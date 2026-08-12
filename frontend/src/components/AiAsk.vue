@@ -36,7 +36,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onBeforeUnmount } from 'vue'
 import { askAIStream } from '../utils/api'
 import MdText from './MdText.vue'
 
@@ -44,6 +44,7 @@ const draft = ref('')
 const records = ref([])
 const loading = ref(false)
 const bodyRef = ref(null)
+let abortController = null
 
 const quickQuestions = ['初一1班数学掌握率', '本班谁在成绩下滑', '红色预警有哪些学生', '本班多少人']
 
@@ -58,6 +59,7 @@ async function ask(text) {
   records.value.push(rec)
   scroll()
 
+  abortController = new AbortController()
   try {
     await askAIStream(q, {
       onStage: (p) => {
@@ -75,8 +77,17 @@ async function ask(text) {
         rec.streaming = false
         scroll()
       },
-    })
+    }, abortController.signal)
+    // 流被中断（无 done 事件）时兜底，避免记录一直停留在“生成中”
+    if (rec.streaming) {
+      rec.stage = ''
+      rec.answer = '回答被中断，请重试'
+      rec.error = true
+      rec.streaming = false
+      scroll()
+    }
   } catch (e) {
+    if (e?.name === 'AbortError') return
     rec.stage = ''
     rec.answer = e?.message?.includes('401') ? '登录已过期，请重新登录' : '提问失败，请稍后再试'
     rec.error = true
@@ -86,6 +97,10 @@ async function ask(text) {
     loading.value = false
   }
 }
+
+onBeforeUnmount(() => {
+  if (abortController) abortController.abort()
+})
 
 function scroll() {
   nextTick(() => { if (bodyRef.value) bodyRef.value.scrollTop = bodyRef.value.scrollHeight })

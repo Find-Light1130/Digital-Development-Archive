@@ -320,6 +320,11 @@ watch(radarOption, () => {
   }
 })
 
+// 图表随 v-if 卸载后，重置绑定标记，避免数据恢复后雷达联动失效
+watch(radarHasData, (has) => {
+  if (!has) zrBound = false
+})
+
 watch([selectedSubject, selectedSemester], () => {
   hoveredDim.value = ''
 })

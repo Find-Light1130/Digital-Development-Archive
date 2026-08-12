@@ -112,11 +112,11 @@ const visibleRows = computed(() => {
 async function load() {
   loading.value = true
   try {
-    const [{ data }, alertResp] = await Promise.allSettled([
+    const [wbRes, alertResp] = await Promise.allSettled([
       getWarningBoard({ className: props.className, grade: props.grade }),
       getCompanionAlerts(20),
     ])
-    rows.value = data ?? []
+    rows.value = wbRes.status === 'fulfilled' ? (wbRes.value?.data ?? []) : []
     alerts.value = alertResp.status === 'fulfilled' ? (alertResp.value?.data ?? []) : []
   } catch (e) {
     rows.value = []

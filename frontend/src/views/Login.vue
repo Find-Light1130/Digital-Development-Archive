@@ -77,7 +77,7 @@ async function onSubmit() {
     const { token, user } = res.data
     setAuth(token, user)
     const redirect = route.query.redirect
-    if (redirect && redirect.startsWith('/')) router.replace(redirect)
+    if (typeof redirect === 'string' && /^\/[^/]/.test(redirect)) router.replace(redirect)
     else router.replace(ROLE_HOME[user.role] || '/')
   } catch (e) {
     const status = e?.response?.status

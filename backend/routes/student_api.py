@@ -87,6 +87,8 @@ def get_scores(student_id: int = Query(..., gt=0), semester: str = Query(None),
                limit: int = Query(None, ge=1, le=1000), offset: int = Query(0, ge=0),
                user=Depends(get_current_user), db: Session = Depends(get_db)):
     _check_access(user, student_id, db)
+    if not db.query(Student.id).filter(Student.id == student_id).first():
+        raise HTTPException(404, "Student not found")
     q = db.query(Score).filter(Score.student_id == student_id)
     if semester:
         q = q.filter(Score.semester == semester)
